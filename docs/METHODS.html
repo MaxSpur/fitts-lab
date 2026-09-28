@@ -43,8 +43,12 @@ if the server rejects an invalid/out-of-range submission.</p>
 <h2 id="coordinate-systems-and-target-geometry">Coordinate systems and
 target geometry</h2>
 <p>The internal arena is 960 × 460 logical units. It scales with its
-displayed width, preserving aspect ratio. Exported geometry is converted
-to <strong>CSS pixels in the arena</strong>. It is not a physical
+displayed width, preserving aspect ratio. On desktop layouts, its size
+is also capped by window height to leave room for the three live
+movement plots. Starting a set preserves scroll position when the stage
+is visible; otherwise it makes the smallest scroll needed, including the
+plots when the whole workspace fits. Exported geometry is converted to
+<strong>CSS pixels in the arena</strong>. It is not a physical
 millimeter calibration. <code>dpr</code> records the device-pixel ratio,
 and <code>viewport_width</code> is the displayed arena width. Retina
 backing pixels do not change D/W by themselves.</p>
@@ -158,14 +162,15 @@ relative movement event after lock is ignored only if it is an
 implausibly large cursor-warp delta.</p>
 <h2 id="equations-and-the-boundary-limit">Equations and the boundary
 limit</h2>
-<p>The participant page places the full explanation after Results. Its
-target editor is an unrecorded one-dimensional illustration: dragging
-translates the target, handles change either edge, and numeric inputs
-specify the near edge and width in illustration units. The view
-automatically rescales after a drag. Arrow keys move a focused handle by
-10 units (Shift: 50); Escape cancels an active drag. Finite geometry is
-retained when toggling the unbounded limit. Presets contrast farther at
-fixed width, wider at fixed centre distance, and uniform scaling.</p>
+<p>The Method editor is an unrecorded 2D rectangle. Dragging moves it
+horizontally and vertically; four edge handles and a corner handle
+resize it. Dimensions appear inside the rectangle. Difficulty uses the
+same center-directed chord as the experiment. Arrow keys adjust the
+focused target or handle by 2 illustration units (Shift: 20); Escape
+cancels an active drag. The extension option fixes the near intersection
+on the approach line and lets the far intersection tend to infinity. It
+preserves the finite rectangle for restoration. All three formulations
+and their live values remain visible.</p>
 <p>The logarithm can be motivated by a halving analogy: reducing a
 region from L to W in k binary steps gives L/2^k = W, hence k =
 log2(L/W). This is an intuition, not a derived motor mechanism. The

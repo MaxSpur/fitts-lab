@@ -32,4 +32,6 @@ Students choose their own stage; the legacy backend `phase` field is ignored. Pl
 
 `src/activity.js` summarizes received selections per run for the classroom sidebar. Count each successful movement once (including retries), exclude practice, preserve arrival order, and never infer online presence or guided completion from these counts. Freeze includes activity and membership snapshots. Device controls are removed; new sets and joins use `unspecified`, while older device values remain compatible.
 
-`src/geometry-lab.js` owns the unrecorded Method target editor and pure geometric readouts. Keep the finite target geometry when showing the infinite-extension limit; distinguish a fixed near edge from a fixed centre. Verify drag, resize, keyboard, cancellation, and reset after changes.
+`src/geometry-lab.js` owns the unrecorded 2D Method editor. It shares the experiment's center-chord formula, keeps the start outside the rectangle, and retains finite geometry during the approach-line extension limit. Verify move, edge/corner resize, keyboard, cancellation, and reset after changes. Method content stays expanded and uses American English.
+
+The participant workspace caps arena size by window height while preserving aspect ratio and CSS-pixel measurements. Starting a set scrolls only if the stage is clipped; keep current-set charts immediately below it and preserve scroll position across sets.

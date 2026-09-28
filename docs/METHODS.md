@@ -18,7 +18,7 @@ No observation is removed simply for exceeding two seconds. The server accepts a
 
 ## Coordinate systems and target geometry
 
-The internal arena is 960 × 460 logical units. It scales with its displayed width, preserving aspect ratio. Exported geometry is converted to **CSS pixels in the arena**. It is not a physical millimeter calibration. `dpr` records the device-pixel ratio, and `viewport_width` is the displayed arena width. Retina backing pixels do not change D/W by themselves.
+The internal arena is 960 × 460 logical units. It scales with its displayed width, preserving aspect ratio. On desktop layouts, its size is also capped by window height to leave room for the three live movement plots. Starting a set preserves scroll position when the stage is visible; otherwise it makes the smallest scroll needed, including the plots when the whole workspace fits. Exported geometry is converted to **CSS pixels in the arena**. It is not a physical millimeter calibration. `dpr` records the device-pixel ratio, and `viewport_width` is the displayed arena width. Retina backing pixels do not change D/W by themselves.
 
 `distance` is the straight-line distance from the actual activation/start point to the target center. `nominal_distance` is the planned center-to-center distance from the current source target. A participant's off-center prior click can make the two differ.
 
@@ -61,7 +61,7 @@ Guided horizontal, circular, and ordinary-button sets default to the system curs
 
 ## Equations and the boundary limit
 
-The participant page places the full explanation after Results. Its target editor is an unrecorded one-dimensional illustration: dragging translates the target, handles change either edge, and numeric inputs specify the near edge and width in illustration units. The view automatically rescales after a drag. Arrow keys move a focused handle by 10 units (Shift: 50); Escape cancels an active drag. Finite geometry is retained when toggling the unbounded limit. Presets contrast farther at fixed width, wider at fixed centre distance, and uniform scaling.
+The Method editor is an unrecorded 2D rectangle. Dragging moves it horizontally and vertically; four edge handles and a corner handle resize it. Dimensions appear inside the rectangle. Difficulty uses the same center-directed chord as the experiment. Arrow keys adjust the focused target or handle by 2 illustration units (Shift: 20); Escape cancels an active drag. The extension option fixes the near intersection on the approach line and lets the far intersection tend to infinity. It preserves the finite rectangle for restoration. All three formulations and their live values remain visible.
 
 The logarithm can be motivated by a halving analogy: reducing a region from L to W in k binary steps gives L/2^k = W, hence k = log2(L/W). This is an intuition, not a derived motor mechanism. The index and its approximately linear relationship with observed time are model choices evaluated against data.
 

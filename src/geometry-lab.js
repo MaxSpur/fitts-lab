@@ -1,67 +1,81 @@
-import {clamp,nearFar} from './math.js';
-const MAX=1_000_000;
-export const INITIAL_GEOMETRY={near:240,width:120,unbounded:false};
-export function geometryValues({near,width,unbounded=false}){
-  const far=unbounded?Infinity:near+width;
-  return{far,distance:unbounded?Infinity:near+width/2,width:unbounded?Infinity:width,ratio:unbounded?.5:(near+width/2)/width,
+import {clamp,nearFar,approachWidth} from './math.js';
+export const ORIGIN={x:36,y:238};
+export const INITIAL_GEOMETRY={x:330,y:130,width:140,height:90,unbounded:false};
+const BOUNDS={left:90,right:570,top:24,bottom:282},MIN_W=84,MIN_H=44;
+/** The finite model uses the same center chord as the experiment. */
+export function geometryValues(state){
+  const center={x:state.x+state.width/2,y:state.y+state.height/2};
+  const dx=center.x-ORIGIN.x,dy=center.y-ORIGIN.y,d=Math.hypot(dx,dy),w=approachWidth(state.width,state.height,dx,dy);
+  const unit={x:dx/d,y:dy/d},near=d-w/2,far=state.unbounded?Infinity:d+w/2;
+  return{center,unit,near,far,distance:state.unbounded?Infinity:d,width:state.unbounded?Infinity:w,ratio:state.unbounded?.5:d/w,
     shannon:nearFar(near,far,'shannon'),fitts:nearFar(near,far,'fitts'),welford:nearFar(near,far,'welford')};
 }
-/** Update one geometric degree of freedom while respecting an external start. */
-export function changeGeometry(state,part,delta){
-  if(part==='target')return{...state,near:clamp(state.near+delta,0,MAX)};
-  if(part==='near'&&state.unbounded)return{...state,near:clamp(state.near+delta,0,MAX)};
-  if(part==='near'){const far=state.near+state.width,near=clamp(state.near+delta,Math.max(0,far-MAX),Math.min(MAX,far-1));return{...state,near,width:state.unbounded?state.width:far-near};}
-  return{...state,width:clamp(state.width+delta,1,MAX)};
+/** Translate or resize from a fixed opposite edge. Keep Start outside the target. */
+export function changeGeometry(state,part,dx,dy=0){
+  if(state.unbounded)return{...state};
+  const next={...state},right=state.x+state.width,bottom=state.y+state.height;
+  if(part==='target'){
+    next.x=clamp(state.x+dx,BOUNDS.left,BOUNDS.right-state.width);
+    next.y=clamp(state.y+dy,BOUNDS.top,BOUNDS.bottom-state.height);
+  }
+  if(part==='left'){next.x=clamp(state.x+dx,BOUNDS.left,right-MIN_W);next.width=right-next.x;}
+  if(part==='top'){next.y=clamp(state.y+dy,BOUNDS.top,bottom-MIN_H);next.height=bottom-next.y;}
+  if(part==='right'||part==='corner')next.width=clamp(state.width+dx,MIN_W,BOUNDS.right-state.x);
+  if(part==='bottom'||part==='corner')next.height=clamp(state.height+dy,MIN_H,BOUNDS.bottom-state.y);
+  return next;
 }
 export function initGeometryLab(){
   const $=id=>document.getElementById(id),svg=$('geometry-diagram');if(!svg)return;
-  let state={...INITIAL_GEOMETRY},drag=null,range=600;
-  const fmt=n=>Number.isFinite(n)?Number(n.toFixed(2)).toLocaleString():'∞';
-  function render(editing=null){
-    const v=geometryValues(state);range=drag?.range||Math.max(600,Math.ceil((state.near+state.width)*1.12/100)*100);
-    const x=n=>50+900*n/range,near=x(state.near),far=state.unbounded?945:x(v.far),centre=state.unbounded?945:x(v.distance),prefix=state.unbounded?'→ ':'';
-    for(const key of ['near','width'])if(editing!==$('geometry-'+key))$('geometry-'+key).value=String(Math.round(state[key]));
-    $('geometry-width').disabled=state.unbounded;$('geometry-unbounded').checked=state.unbounded;
-    const target=$('geometry-target');target.setAttribute('x',near);target.setAttribute('width',Math.max(1,far-near));target.classList.toggle('unbounded',state.unbounded);
-    for(const [part,value]of [['near',state.near],['far',state.near+state.width]]){
-      const handle=$(`geometry-${part}-handle`),px=part==='near'?near:far;
-      handle.setAttribute('transform',`translate(${px},0)`);handle.querySelector('rect').setAttribute('x',-12);handle.querySelector('path').setAttribute('d','M0 67V163 M-5 79H5 M-5 151H5');
-      handle.setAttribute('aria-valuemin',part==='near'?'0':String(Math.round(state.near+1)));handle.setAttribute('aria-valuemax',String(part==='near'?(state.unbounded?MAX:Math.min(MAX,state.near+state.width-1)):state.near+MAX));handle.setAttribute('aria-valuenow',String(Math.round(value)));handle.setAttribute('aria-valuetext',`${fmt(value)} illustration units`);
-      handle.toggleAttribute('hidden',state.unbounded&&part==='far');
+  let state={...INITIAL_GEOMETRY},drag=null;
+  const fmt=n=>Number.isFinite(n)?String(Math.round(n)):'∞';
+  const attrs=(el,values)=>{for(const[k,v]of Object.entries(values))el.setAttribute(k,String(v));};
+  const along=(v,t)=>({x:ORIGIN.x+v.unit.x*t,y:ORIGIN.y+v.unit.y*t});
+  const line=(id,a,b)=>attrs($(id),{x1:a.x,y1:a.y,x2:b.x,y2:b.y});
+  function render(){
+    const v=geometryValues(state),finite=geometryValues({...state,unbounded:false}),prefix=state.unbounded?'→ ':'';
+    const target=$('geometry-target');attrs(target,{x:state.x,y:state.y,width:state.width,height:state.height,'aria-label':`Move target. Position ${fmt(state.x)}, ${fmt(state.y)}; size ${fmt(state.width)} by ${fmt(state.height)}. Arrow keys move; Shift increases the step.`});
+    target.toggleAttribute('hidden',state.unbounded);$('geometry-handles').toggleAttribute('hidden',state.unbounded);
+    const handles={left:[state.x,v.center.y,state.x,BOUNDS.left,state.x+state.width-MIN_W],right:[state.x+state.width,v.center.y,state.x+state.width,state.x+MIN_W,BOUNDS.right],top:[v.center.x,state.y,state.y,BOUNDS.top,state.y+state.height-MIN_H],bottom:[v.center.x,state.y+state.height,state.y+state.height,state.y+MIN_H,BOUNDS.bottom],corner:[state.x+state.width,state.y+state.height]};
+    for(const[part,[x,y,value,min,max]]of Object.entries(handles)){
+      const el=$('geometry-'+part+'-handle');attrs(el,{x:x-7,y:y-7,width:14,height:14});
+      if(part==='corner')el.setAttribute('aria-label',`Resize width and height. ${fmt(state.width)} by ${fmt(state.height)}. Use arrow keys.`);
+      else attrs(el,{'aria-valuenow':Math.round(value),'aria-valuemin':min,'aria-valuemax':max,'aria-valuetext':`${fmt(value)} illustration units`});
     }
-    target.setAttribute('aria-valuemin','0');target.setAttribute('aria-valuemax',String(MAX));target.setAttribute('aria-valuenow',String(Math.round(state.near)));target.setAttribute('aria-valuetext',`Near edge ${fmt(state.near)}, width ${state.unbounded?'unbounded':fmt(state.width)}`);
-    $('geometry-target-label').setAttribute('x',(near+far)/2);$('geometry-target-label').textContent=far-near>75?'Target':'';
-    const centreLine=$('geometry-centre');centreLine.toggleAttribute('hidden',state.unbounded);centreLine.setAttribute('x1',centre);centreLine.setAttribute('x2',centre);
-    $('geometry-width-line').setAttribute('d',`M${near} 63V52H${far}V63`);$('geometry-width-label').setAttribute('x',(near+far)/2);$('geometry-width-label').textContent=`W ${state.unbounded?'→ ∞':'= '+fmt(v.width)}`;
-    $('geometry-distance-line').setAttribute('d',state.unbounded?'':`M50 183V192H${centre}V183`);$('geometry-distance-label').setAttribute('x',state.unbounded?500:(50+centre)/2);$('geometry-distance-label').textContent=state.unbounded?'Centre recedes as the far edge extends':`D = ${fmt(v.distance)}`;
-    $('geometry-infinity').toggleAttribute('hidden',!state.unbounded);
-    const ticks=$('geometry-ticks');ticks.replaceChildren();
-    for(let i=0;i<=4;i++){const text=document.createElementNS(svg.namespaceURI,'text');text.setAttribute('x',50+i*225);text.setAttribute('y',246);text.setAttribute('text-anchor','middle');text.textContent=fmt(i*range/4);ticks.append(text);}
-    $('geometry-scale').textContent=`Illustration units · view 0–${fmt(range)} · scale fits automatically after a drag. Numbers remain exact.`;
-    $('geometry-d').textContent=prefix+fmt(v.distance);$('geometry-w').textContent=prefix+fmt(v.width);$('geometry-ratio').textContent=prefix+v.ratio.toFixed(3);$('geometry-id').textContent=prefix+v.shannon.toFixed(3)+' bits';
-    for(const name of ['shannon','fitts','welford'])$('geometry-'+name).textContent=prefix+v[name].toFixed(3)+' bits';
-    $('geometry-observation').textContent=state.unbounded?`Near edge n = ${fmt(state.near)} stays fixed. Both D and W grow without bound, while D/W approaches ½. The limiting index describes the formula, not zero travel time.`:`The target runs from n = ${fmt(state.near)} to f = ${fmt(v.far)}. Its centre is ${fmt(v.distance)} units from the start. Move it farther, widen it, or scale both to see what changes.`;
+    let label=v.center;
+    line('geometry-approach',ORIGIN,v.center);
+    line('geometry-chord',along(finite,finite.near),along(finite,finite.far));
+    $('geometry-chord').toggleAttribute('hidden',state.unbounded);
+    $('geometry-extension').toggleAttribute('hidden',!state.unbounded);
+    if(state.unbounded){
+      const end=Math.min((588-ORIGIN.x)/v.unit.x,v.unit.y<0?(12-ORIGIN.y)/v.unit.y:v.unit.y>0?(308-ORIGIN.y)/v.unit.y:Infinity);
+      const a=along(v,v.near),b=along(v,end),normal={x:-v.unit.y*23,y:v.unit.x*23};
+      const points=[[a.x+normal.x,a.y+normal.y],[b.x+normal.x,b.y+normal.y],[b.x-normal.x,b.y-normal.y],[a.x-normal.x,a.y-normal.y]];
+      $('geometry-extension').setAttribute('points',points.map(p=>p.join(',')).join(' '));
+      line('geometry-approach',ORIGIN,b);label=along(v,(v.near+end)/2);
+    }
+    attrs($('geometry-size'),{x:label.x,y:label.y-5});$('geometry-size').textContent=state.unbounded?'W∥ → ∞':`${fmt(state.width)} × ${fmt(state.height)}`;
+    attrs($('geometry-width-label'),{x:label.x,y:label.y+13});$('geometry-width-label').textContent=state.unbounded?'→':`W∥ ${fmt(v.width)}`;
+    const distanceLabel=along(finite,finite.near/2);attrs($('geometry-distance-label'),{x:distanceLabel.x,y:distanceLabel.y-12});$('geometry-distance-label').textContent=state.unbounded?`n = ${fmt(v.near)}`:`D = ${fmt(v.distance)}`;
+    $('geometry-unbounded').checked=state.unbounded;
+    for(const[id,value]of [['d',v.distance],['w',v.width],['ratio',v.ratio]])$('geometry-'+id).textContent=prefix+(id==='ratio'?value.toFixed(2):fmt(value));
+    for(const[id,value]of [['fitts',v.fitts],['welford',v.welford],['id',v.shannon]])$('geometry-'+id).textContent=prefix+value.toFixed(3);
+    $('geometry-observation').textContent=state.unbounded?`The near intersection stays at n = ${fmt(v.near)}. As the far intersection recedes, D and W∥ both grow and D/W∥ → ½. Fitts and Welford approach 0 bits; Shannon approaches 0.585 bits.`:'Extend the target along this line to compare the limits. The near intersection stays fixed while the far intersection recedes. The finite rectangle is restored when you turn the option off.';
   }
-  function point(event){const p=svg.createSVGPoint();p.x=event.clientX;p.y=event.clientY;return p.matrixTransform(svg.getScreenCTM().inverse()).x;}
+  function point(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
   function finish(cancel=false){if(!drag)return;const current=drag;drag=null;if(cancel)state=current.state;if(current.el.hasPointerCapture(current.id))current.el.releasePointerCapture(current.id);render();}
-  for(const [part,el]of [['target',$('geometry-target')],['near',$('geometry-near-handle')],['far',$('geometry-far-handle')]]){
-    el.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();el.focus();drag={part,el,id:e.pointerId,x:point(e),state:{...state},range};el.setPointerCapture(e.pointerId);});
-    el.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;state=changeGeometry(drag.state,part,Math.round((point(e)-drag.x)*drag.range/900));render();});
-    el.addEventListener('pointerup',()=>finish());el.addEventListener('pointercancel',()=>finish(true));
-    el.addEventListener('keydown',e=>{if(e.key==='Escape'){finish(true);return;}if(!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();state=changeGeometry(state,part,(e.key==='ArrowLeft'?-1:1)*(e.shiftKey?50:10));render();});
-  }
-  for(const [id,key]of [['geometry-near','near'],['geometry-width','width']]){
-    const update=e=>{const n=e.target.valueAsNumber;if(Number.isFinite(n))state={...state,[key]:clamp(Math.round(n),key==='width'?1:0,MAX)};render(e.type==='input'?e.target:null);};
-    $(id).addEventListener('input',update);$(id).addEventListener('change',update);
+  for(const part of ['target','left','right','top','bottom','corner']){
+    const el=$(part==='target'?'geometry-target':`geometry-${part}-handle`);
+    el.addEventListener('pointerdown',e=>{if(e.button!==0||state.unbounded)return;e.preventDefault();el.focus({preventScroll:true});drag={part,el,id:e.pointerId,point:point(e),state:{...state}};el.setPointerCapture(e.pointerId);});
+    el.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const p=point(e);state=changeGeometry(drag.state,part,Math.round(p.x-drag.point.x),Math.round(p.y-drag.point.y));render();});
+    el.addEventListener('pointerup',()=>finish());el.addEventListener('pointercancel',()=>finish(true));el.addEventListener('lostpointercapture',()=>finish(true));
+    el.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){finish(true);return;}
+      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;
+      e.preventDefault();const step=e.shiftKey?20:2;
+      state=changeGeometry(state,part,e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0,e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0);render();
+    });
   }
   $('geometry-unbounded').addEventListener('change',e=>{const checked=e.target.checked;finish();state.unbounded=checked;render();});
   $('geometry-reset').addEventListener('click',()=>{finish();state={...INITIAL_GEOMETRY};render();});
-  document.querySelectorAll('[data-geometry]').forEach(b=>b.addEventListener('click',()=>{
-    finish();const d=state.near+state.width/2;state.unbounded=false;
-    if(b.dataset.geometry==='farther')state.near=clamp(2*d-state.width/2,0,MAX);
-    if(b.dataset.geometry==='wider'){state.width=Math.min(2*state.width,2*d,MAX);state.near=d-state.width/2;}
-    if(b.dataset.geometry==='scale'){const factor=Math.min(2,MAX/Math.max(1,state.near,state.width));state.near*=factor;state.width*=factor;}
-    render();
-  }));
   render();
 }

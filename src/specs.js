@@ -18,15 +18,15 @@ export function heroSpec({height=320,extent=2000,x:field='index_difficulty',xMax
     {data:{name:'fit'},mark:{type:'line',strokeWidth:2,color:'#283936',clip:true},encoding:{x,y,strokeDash:stageDash,detail:{field:'series'},tooltip:[{field:'task',title:'Stage'},{field:'label',title:'Settings'},{field:'n',title:'Successful attempts'},{field:'r2',title:'R²',format:'.2f'}]}}
   ]};
 }
-export function pathSpec(){return{...base(190),data:{name:'paths'},layer:[
+export function pathSpec(height=190){return{...base(height),data:{name:'paths'},layer:[
   {data:{values:[{}]},mark:{type:'rule',color:'#b8c3d4',strokeDash:[4,4]},encoding:{x:{datum:1,type:'quantitative'}}},
   {mark:{type:'line',strokeWidth:1.6,opacity:.55},encoding:{x:{field:'along',type:'quantitative',title:'Progress toward target (1 = center)',axis:{tickCount:6,format:'.1f'},scale:{domain:[-.1,1.3]}},y:{field:'across',type:'quantitative',title:'Deviation (CSS px)',axis:{format:'.0f',tickCount:5}},detail:{field:'id'},order:{field:'order'},color:{field:'outcome',scale:{domain:['Hit','Miss'],range:['#387d87','#bd5b2f']},legend:null},tooltip:[{field:'time',title:'Time (ms)',format:'.0f'}]}}
 ]};}
-export function speedSpec(){return{...base(190),data:{name:'speeds'},mark:{type:'line',opacity:.6,strokeWidth:1.5,color:'#387d87'},encoding:{x:{field:'time',type:'quantitative',title:'Time since target activation (ms)'},y:{field:'speed',type:'quantitative',title:'Cursor speed (CSS px/s)'},detail:{field:'id'},order:{field:'time'},tooltip:[{field:'time',format:'.0f'},{field:'speed',format:'.0f'}]}};}
-export function endpointsSpec(shape='rect',extent=2){
+export function speedSpec(height=190){return{...base(height),data:{name:'speeds'},mark:{type:'line',opacity:.6,strokeWidth:1.5,color:'#387d87'},encoding:{x:{field:'time',type:'quantitative',title:'Time since target activation (ms)'},y:{field:'speed',type:'quantitative',title:'Cursor speed (CSS px/s)'},detail:{field:'id'},order:{field:'time'},tooltip:[{field:'time',format:'.0f'},{field:'speed',format:'.0f'}]}};}
+export function endpointsSpec(shape='rect',extent=2,height=190){
   const target=shape==='circle'?Array.from({length:65},(_,i)=>({x:Math.cos(i*2*Math.PI/64),y:Math.sin(i*2*Math.PI/64),order:i})):[{x:-1,y:-1,order:0},{x:1,y:-1,order:1},{x:1,y:1,order:2},{x:-1,y:1,order:3},{x:-1,y:-1,order:4}];
   const enc={x:{field:'x',type:'quantitative',title:'Horizontal / half-width',scale:{domain:[-extent,extent]}},y:{field:'y',type:'quantitative',title:'Vertical / half-height',scale:{domain:[-extent,extent],reverse:true}}};
-  return{...base(190),layer:[{data:{values:target},mark:{type:'line',color:'#a7b6cd',strokeWidth:1.5},encoding:{...enc,order:{field:'order'}}},{data:{name:'endpoints'},mark:{type:'point',filled:true,size:44,opacity:.65},encoding:{...enc,color:{field:'outcome',scale:{domain:['Hit','Miss'],range:['#387d87','#bd5b2f']},legend:null},tooltip:[{field:'trial'},{field:'outcome'},{field:'acquisition_ms',format:'.0f'}]}}]};
+  return{...base(height),layer:[{data:{values:target},mark:{type:'line',color:'#a7b6cd',strokeWidth:1.5},encoding:{...enc,order:{field:'order'}}},{data:{name:'endpoints'},mark:{type:'point',filled:true,size:44,opacity:.65},encoding:{...enc,color:{field:'outcome',scale:{domain:['Hit','Miss'],range:['#387d87','#bd5b2f']},legend:null},tooltip:[{field:'trial'},{field:'outcome'},{field:'acquisition_ms',format:'.0f'}]}}]};
 }
 export function boundarySpec(){return{...base(230),data:{name:'boundaries'},layer:[
   {transform:[{joinaggregate:[{op:'count',as:'pair_count'}],groupby:['comparison_key']},{filter:'datum.pair_count === 2'},

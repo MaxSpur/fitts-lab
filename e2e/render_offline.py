@@ -75,7 +75,7 @@ with sync_playwright() as p:
  assert 'vega-lite/v6' in page.locator('#code-text').inner_text()
  page.locator('#code-dialog [data-close-dialog]').click()
  page.locator('#geometry-unbounded').check()
- assert '0.585 bits' in page.locator('#geometry-id').inner_text()
+ assert '0.585' in page.locator('#geometry-id').inner_text()
  page.locator('#input-mode').select_option('virtual')
  page.locator('#start-button').click()
  page.wait_for_timeout(400)

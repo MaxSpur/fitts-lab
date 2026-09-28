@@ -13,7 +13,7 @@ export function nearFar(near, far, formulation = 'fitts') {
   if (formulation === 'shannon') return shannon(d,width);
   return Math.log2(2*d/width);
 }
-/** Centre-directed chord, not projected bounding-box width or statistical effective width. */
+/** Center-directed chord, not projected bounding-box width or statistical effective width. */
 export function approachWidth(w, h, dx, dy) {
   const d = Math.hypot(dx,dy);
   if (!(w>0 && h>0) || !d) return Math.min(w,h);

@@ -1,18 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {INITIAL_GEOMETRY,geometryValues,changeGeometry} from '../src/geometry-lab.js';
-test('geometry readout derives centre distance and all indices from target endpoints',()=>{
- const v=geometryValues(INITIAL_GEOMETRY);assert.equal(v.distance,300);assert.equal(v.width,120);assert.equal(v.ratio,2.5);assert.equal(v.shannon,Math.log2(3.5));assert.equal(v.fitts,Math.log2(5));assert.equal(v.welford,Math.log2(3));
- const scaled=geometryValues({near:480,width:240});assert.equal(v.shannon,scaled.shannon);
+import {ORIGIN,INITIAL_GEOMETRY,geometryValues,changeGeometry} from '../src/geometry-lab.js';
+const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
+test('2D geometry uses the approach chord and all three difficulty formulations',()=>{
+ const s={x:300,y:ORIGIN.y-40,width:160,height:80},v=geometryValues(s);
+ assert.equal(v.distance,344);assert.equal(v.width,160);close(v.shannon,Math.log2(1+344/160));close(v.fitts,Math.log2(2*344/160));close(v.welford,Math.log2(344/160+.5));
+ const diagonal=geometryValues({...s,y:24,height:44});assert.notEqual(diagonal.width,44);assert.ok(diagonal.width<160);
+ const taller=geometryValues({...s,y:24,height:160});assert.ok(taller.width>diagonal.width);
+ const scaled=geometryValues({x:ORIGIN.x+2*(s.x-ORIGIN.x),y:ORIGIN.y+2*(s.y-ORIGIN.y),width:s.width*2,height:s.height*2});close(v.shannon,scaled.shannon);
 });
-test('moving preserves width; resizing the near edge preserves the far edge and positive width',()=>{
- const moved=changeGeometry(INITIAL_GEOMETRY,'target',100);assert.equal(moved.width,120);assert.equal(moved.near,340);
- const resized=changeGeometry(INITIAL_GEOMETRY,'near',50);assert.equal(resized.near+resized.width,360);assert.equal(resized.width,70);
- assert.equal(changeGeometry(INITIAL_GEOMETRY,'near',1000).width,1);
- assert.equal(changeGeometry(INITIAL_GEOMETRY,'target',-1000).near,0);
- assert.equal(changeGeometry(INITIAL_GEOMETRY,'far',-1000).width,1);
+test('2D dragging preserves dimensions; edge resizing anchors the opposite edge',()=>{
+ const moved=changeGeometry(INITIAL_GEOMETRY,'target',20,-30);assert.equal(moved.x,350);assert.equal(moved.y,100);assert.equal(moved.width,140);assert.equal(moved.height,90);
+ const left=changeGeometry(INITIAL_GEOMETRY,'left',40);assert.equal(left.x+left.width,470);
+ const top=changeGeometry(INITIAL_GEOMETRY,'top',20,30);assert.equal(top.y+top.height,220);assert.equal(top.height,60);
+ const corner=changeGeometry(INITIAL_GEOMETRY,'corner',30,40);assert.equal(corner.width,170);assert.equal(corner.height,130);
+ for(const part of ['target','left','right','top','bottom','corner'])for(const delta of [-10000,10000]){
+   const s=changeGeometry(INITIAL_GEOMETRY,part,delta,delta);assert.ok(s.x>=90&&s.y>=24);assert.ok(s.x+s.width<=570&&s.y+s.height<=282);assert.ok(s.width>=84&&s.height>=44);assert.ok(geometryValues(s).near>0);
+ }
 });
-test('unbounded target uses algebraic limits and can still move its near edge',()=>{
+test('extension uses limits along the approach and retains the finite rectangle',()=>{
  const state={...INITIAL_GEOMETRY,unbounded:true},v=geometryValues(state);assert.equal(v.distance,Infinity);assert.equal(v.width,Infinity);assert.equal(v.ratio,.5);assert.equal(v.shannon,Math.log2(1.5));assert.equal(v.fitts,0);assert.equal(v.welford,0);
- assert.equal(changeGeometry(state,'near',1000).near,1240);
+ assert.deepEqual(changeGeometry(state,'target',100,100),state);assert.equal(v.near,geometryValues(INITIAL_GEOMETRY).near);
 });

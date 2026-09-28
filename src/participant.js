@@ -92,9 +92,9 @@ function onStatus(e){
     'Captured cursor · relative movement. Esc or P releases it before changing mode.');
   if(e.options.inputMode==='native'){$('#jitter').disabled=true;$('#gain').disabled=true;}
   text('#overlay-title',complete?'Set complete':e.state==='paused'?'Paused':'Ready');
-  if(complete){const a=rows.filter(r=>r.set_id===e.id&&r.attempt===1);const m=mean(a.map(r=>r.acquisition_ms));text('#overlay-text',`${a.length} first attempts · ${m?Math.round(m)+' ms on average':'no timed data'} · ${a.filter(r=>!r.hit).length} misses. Your traces stay visible below.`);text('#start-button',nextLabel());}
+  if(complete){const a=rows.filter(r=>r.set_id===e.id&&r.attempt===1);const m=mean(a.map(r=>r.acquisition_ms));text('#overlay-text',`${a.length} first attempts · ${m?Math.round(m)+' ms on average':'no timed data'} · ${a.filter(r=>!r.hit).length} misses.`);text('#start-button',nextLabel());}
   else{const start=e.plan.task==='interfaces'&&e.plan.positions?'starting button':'start marker';text('#overlay-text',e.state==='paused'?`Completed attempts are saved. Click the ${start} to resume.`:e.options.inputMode==='native'?`System cursor. Click the ${start}, then each target. Press P to pause.`:`Cursor capture. Click the ${start}, then each target. Esc releases it.`);text('#start-button',e.state==='paused'?'Resume set':'Start set');}
-  text('#trial-status',e.state==='armed'?`Click the ${e.plan.task==='interfaces'&&e.plan.positions?'starting button':'starting marker'}. This click is unscored.`:e.state==='running'?`${e.count} / ${e.plan.count} selections · ${e.attempt>1?'miss recorded; correct your aim':'primary-button clicks only'}`:complete?'Review your traces, then explicitly start the next set.':'The starting click is unscored.');
+  text('#trial-status',e.state==='armed'?`Click the ${e.plan.task==='interfaces'&&e.plan.positions?'starting button':'starting marker'}. This click is unscored.`:e.state==='running'?`${e.count} / ${e.plan.count} selections · ${e.attempt>1?'miss recorded; correct your aim':'primary-button clicks only'}`:complete?'Set complete.':'The starting click is unscored.');
   $('#progress-track').innerHTML='';for(let i=0;i<e.plan.count;i++){const span=document.createElement('span');span.className='segment'+(i<e.count?' done':'');$('#progress-track').append(span);}
   if(['running','armed'].includes(e.state)&&currentSet?.id===e.id)saveCurrent();
   $('#distance-control').disabled=active||task==='interfaces';
@@ -115,8 +115,14 @@ function start(){
     }else prepare();
   }
   if(rows.length>=CONFIG.maxLocalTrials){toast('Export and clear the local history before starting more sets.',true);return;}
-  // Keep the entire measured area in view before the first movement.
-  $('#arena').scrollIntoView({block:'center',behavior:'instant'});
+  // Preserve the chosen view. Reveal only what is clipped, including plots when they fit.
+  let bounds=$('.stage').getBoundingClientRect();
+  if(bounds.top<8||bounds.bottom>innerHeight-8){
+    const workspace=$('#experiment').getBoundingClientRect();
+    if(workspace.height<=innerHeight-16)bounds=workspace;
+    const top=bounds.top<8||bounds.height>innerHeight-16?bounds.top-8:bounds.bottom-innerHeight+8;
+    window.scrollBy({top,behavior:'instant'});
+  }
   saveCurrent('armed');arena.start();
 }
 $('#start-button').onclick=start;$('#pause-button').onclick=()=>arena.pause('Pause button');
@@ -136,8 +142,8 @@ function historyOptions(){const selected=$('#set-history').value;$('#set-history
 }
 async function renderMini(){
   const id=$('#set-history').value==='current'?arena.engine?.id:$('#set-history').value,rs=rows.filter(r=>r.set_id===id),s=sets.find(s=>s.id===id)||currentSet;
-  if(!rs.length){for(const k of ['paths','speed','endpoints'])charts[k].empty('Your traces will appear here.\nFinish a few clicks to begin.');return;}
-  const defs={paths:[pathSpec(),{paths:pathRows(rs)}],speed:[speedSpec(),{speeds:speedRows(rs)}],endpoints:[endpointsSpec(s?.task==='circles'?'circle':'rect',Math.max(2,...endpointRows(rs).flatMap(r=>[Math.abs(r.x),Math.abs(r.y)]))*1.05),{endpoints:endpointRows(rs)}]};
+  if(!rs.length){for(const k of ['paths','speed','endpoints'])charts[k].empty('No attempts yet.');return;}
+  const defs={paths:[pathSpec(170),{paths:pathRows(rs)}],speed:[speedSpec(170),{speeds:speedRows(rs)}],endpoints:[endpointsSpec(s?.task==='circles'?'circle':'rect',Math.max(2,...endpointRows(rs).flatMap(r=>[Math.abs(r.x),Math.abs(r.y)]))*1.05,170),{endpoints:endpointRows(rs)}]};
   for(const[k,[spec,data]]of Object.entries(defs)){const key=k==='endpoints'?JSON.stringify(spec.layer[0]):'stable';if(charts[k].result&&charts[k]._geometryKey===key)await charts[k].update(data);else{charts[k]._geometryKey=key;await charts[k].set(spec,data);}}
 }
 async function renderResults(){
