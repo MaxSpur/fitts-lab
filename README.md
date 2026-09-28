@@ -2,8 +2,8 @@
 
 Two static websites for a classroom introduction to human–computer interaction.
 
-- **`index.html` — participant.** Each stage has 72 timed selections: six Horizontal sets, six Circular sets with three distances and two target sizes, and one varied-button set followed by matched menu/window comparisons. Interface sets begin with one unscored button, then continue from target to target. Ordinary targets use the system cursor by default; simulated hard edges use a captured cursor. The page includes live movement traces, descriptive trendlines, persistent browser history, and CSV/JSON exports.
-- **`classroom.html` — instructor.** A live participant mosaic, incoming-data pulses, a distance↔difficulty transition, linked participant inspection, paired boundary comparisons, freeze/presentation modes, exports and snapshot imports.
+- **`index.html` — participant.** Three stages, each with four sets of eight timed selections. Horizontal and Circles use four target sizes and balanced, randomized distances; Interfaces alternates ordinary buttons with menu/window controls in matched free/edge sets. Each guided set has one unscored start, then continues from target to target. Horizontal and Circles use the system cursor by default; the matched free/edge sets use a captured cursor. Live movement traces, descriptive trendlines, browser history, and CSV/JSON exports are included.
+- **`classroom.html` — instructor.** A live participant mosaic, incoming-data pulses, Distance, Size, and Difficulty views, linked participant inspection, paired boundary comparisons, freeze/presentation modes, exports and snapshot imports.
 
 Both are complete static applications. The participant page works without a backend. Multi-computer classroom sharing requires the included Supabase schema and Edge Function to be deployed and configured; a hosted project is **not** included or pre-provisioned.
 

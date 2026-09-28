@@ -58,12 +58,14 @@ horizontal centerline; strips are visually tall. In each guided set,
 width stays fixed while the next target appears at a seeded position and
 designed distance from the previous target. A successful click starts
 the next movement at the actual click point. Custom exploration instead
-keeps one selected distance and width in three four-selection blocks. A
+keeps one selected distance and width in two four-selection blocks. A
 new block's first click is unscored, so repositioning the pair is not
 treated as a measured movement. In captured mode vertical deltas are
 ignored; in system-cursor mode absolute browser positions are projected
 onto the line.</p>
-<p>The circular protocol has twelve targets, with an index step of five.
+<p>The circular protocol displays sixteen evenly spaced targets on one
+ring. A seeded path visits nine distinct targets (one start and eight
+measured selections), changing direction and connection length.
 Distances are actual chords between successive positions, not arc
 lengths and not silently the ring diameter. Circle width is its diameter
 for the center-directed model.</p>
@@ -78,38 +80,35 @@ is different from projected bounding-box width and from statistically
 effective width inferred from endpoint variance. There is no claim that
 it is a universal 2D Fitts model.</p>
 <h2 id="default-conditions">Default conditions</h2>
-<p>Each stage has 72 scored selections. Horizontal and Circles each use
-six sets of 12; Interfaces uses one ordinary-button set of 24 and four
-boundary sets of 12. Starting clicks and retries are additional.</p>
-<p>Horizontal: widths 24 and 64 alternate across six sets, with the
-first width shuffled. Designed distances 160, 360, and 560 occur twelve
-times at each width across three sets, with no adjacent repeated
-distance. Positions are seeded and vary across the strip. Custom
-exploration retains its separate 12-selection schedule.</p>
-<p>Circles: ring diameters 180, 280, and 380 crossed with target
-diameters 22 and 44, twelve selections in each of the six conditions.
-The actual step-five travel chords are approximately 174, 270, and 367
-logical units. Target size and movement distance vary independently
-across sets, and order is seeded per participant. The twelve-position
-ring preserves the same twelve movement directions at each distance.</p>
-<p>Interfaces: one seeded run of 24 abstract button selections, after
-one unscored start. Widths and heights span normal UI proportions; each
-successful click activates the next button without homing. Distances and
-sizes vary together, so these observations are exploratory rather than a
-controlled size comparison.</p>
-<p>Two matched boundary pairs follow: menu items with or without a hard
-top edge, and window controls with or without hard top and left edges.
-Each side has twelve successes after one unscored starting button. Six
-approaches lead to menu/window controls and six lead back to ordinary
-buttons. The sequence is continuous, without a Home click. Menu/window
-control positions and sizes vary within a set; the boundary frame stays
-fixed during a set. The paired free/edge runs share target sequence and
-frame. The free run always comes first, so practice or fatigue can
-influence the apparent difference; the comparison remains descriptive.
-Repeating a pair uses a new seed. Automatic cursor mode uses captured
-input on both sides. A selected system cursor on a free side makes those
-observations exploratory rather than directly matched. The older
-wide/tall buttons remain in Explore.</p>
+<p>Each stage has four sets of eight scored selections: 32 per stage, 96
+in a complete run. Starting clicks and retries are additional. All
+guided sets continue from the last successful click without homing.</p>
+<p>Horizontal: one set at each width of 20, 32, 48, and 64 logical
+units, in seeded order. Designed distances 120, 240, 360, and 480 occur
+twice per width, with no adjacent repeated distance. Positions vary
+across the strip. Custom exploration uses eight selections in two
+four-selection blocks.</p>
+<p>Circles: the same four target diameters, one set each, on a ring of
+diameter 360. Each set uses sixteen visible sites. Randomized
+connections span 1, 3, 5, or 7 ring steps in either direction, twice
+each: travel chords of approximately 70, 200, 299, and 353 logical
+units. No target is revisited within a set, and no connection is
+diametrically opposite. Distance and width remain balanced while
+connection order and direction vary. These are randomized pointing
+sequences, not a standardized reciprocal tapping test.</p>
+<p>Interfaces: four sets of eight, alternating ordinary buttons with
+menu items or window controls. The sets are menu free, menu edge, window
+free, and window edges. Each starts with one unscored ordinary button,
+followed by four control approaches and four selections of ordinary
+buttons. Sizes and positions vary within each set; these are exploratory
+UI comparisons rather than four fixed-size conditions.</p>
+<p>The paired free/edge runs share target sequence and boundary frame.
+Menu pairs compare a free target with a hard top edge; window pairs add
+hard top and left edges. The free run always comes first, so practice or
+fatigue can influence the apparent difference. Automatic cursor mode
+uses captured input on both sides. A selected system cursor on a free
+side makes those observations exploratory rather than directly matched.
+Wide/tall buttons remain available in Explore.</p>
 <p>Width/height/distance exploration creates separately named
 conditions. In the interface explorer, width and height are editable;
 distance follows the seeded target sequence. Jitter and gain settings
@@ -136,25 +135,25 @@ pauses. The application does not request raw
 relative input behavior, with operating-system acceleration normally
 retained. Relative units and acceleration should still be checked on the
 actual browsers/devices.</p>
-<p>Guided horizontal, circular, and abstract-button sets default to the
-system cursor. The cursor selector can start a new set in captured mode;
-earlier attempts remain in history. Automatic mode uses captured input
-on both sides of guided menu/window pairs so the free and bounded cases
-share an input path. Hard-boundary conditions require captured input.
-During captured movement, the virtual cursor is positioned directly from
-mouse events. A separate low-resolution transparent Canvas draws the
-live path at up to about 30 frames per second without repainting the
-main arena. The last completed path remains visible after a successful
-click. This reduces application-side work but cannot remove latency
-introduced by a browser's Pointer Lock implementation. Test the actual
-classroom browser and pointing devices before interpreting captured
-timing. Smooth bounded jitter is an optional sinusoidal two-frequency
-offset, defined as a function of time, not event count; its displayed
-cursor position is also the hit-test point. It is an illustration of an
-unsteady pointer, not a clinical impairment model. Gain is a scalar on
-relative input, not a replacement OS acceleration curve. The first
-relative movement event after lock is ignored only if it is an
-implausibly large cursor-warp delta.</p>
+<p>Guided horizontal and circular sets default to the system cursor. The
+cursor selector can start a new set in captured mode; earlier attempts
+remain in history. Automatic mode uses captured input on both sides of
+guided menu/window pairs so the free and bounded cases share an input
+path. Hard-boundary conditions require captured input. During captured
+movement, the virtual cursor is positioned directly from mouse events. A
+separate low-resolution transparent Canvas draws the live path at up to
+about 30 frames per second without repainting the main arena. The last
+completed path remains visible after a successful click. This reduces
+application-side work but cannot remove latency introduced by a
+browser's Pointer Lock implementation. Test the actual classroom browser
+and pointing devices before interpreting captured timing. Smooth bounded
+jitter is an optional sinusoidal two-frequency offset, defined as a
+function of time, not event count; its displayed cursor position is also
+the hit-test point. It is an illustration of an unsteady pointer, not a
+clinical impairment model. Gain is a scalar on relative input, not a
+replacement OS acceleration curve. The first relative movement event
+after lock is ignored only if it is an implausibly large cursor-warp
+delta.</p>
 <h2 id="equations-and-the-boundary-limit">Equations and the boundary
 limit</h2>
 <p>Ordinary-target charts use Shannon difficulty:</p>
@@ -176,8 +175,9 @@ term does not mean zero movement time or physical effort.</p>
 stopping-precision constraint. It is not a complete travel-time law for
 an unbounded target. A real pointer still travels, a menu needs
 precision along the edge, and a corner changes the control geometry.
-Edge/corner records therefore have <code>index_difficulty=null</code>
-and are excluded from the ordinary Fitts plot.</p>
+Hard-edge/corner records therefore have
+<code>index_difficulty=null</code> and are excluded from the ordinary
+Fitts plot.</p>
 <h2 id="charts-and-summaries">Charts and summaries</h2>
 <p>Miniatures show paths (the latest 12 attempts), speed (the latest
 six), and every click endpoint in the selected set. Path coordinates are
@@ -196,16 +196,17 @@ practice-tagged records. Misses remain visible as separate outcomes.
 Means and regressions use successful first attempts, with errors shown
 alongside; a fast condition with a high miss rate should not be judged
 by its successful timings alone.</p>
-<p>The time-versus-difficulty plots for Horizontal, Circles, and varied
-buttons show descriptive ordinary least squares trendlines through
-successful first attempts. Each line requires at least eight successful
-first attempts and an observed difficulty span of at least 0.5 bits (or
-40 CSS pixels on Distance, 8 CSS pixels on Size). Horizontal and
-Circular fits also require at least two planned conditions with three
-successful observations each. Varied buttons use their continuous
-geometric variation. Lines stop at the observed range; no trials are
-removed just for being slow. Equations, sample sizes, and R² describe
-the successful observations, with misses displayed separately.</p>
+<p>The time-versus-difficulty plots for Horizontal, Circles, and free
+interface targets show descriptive ordinary least squares trendlines
+through successful first attempts. Each line requires at least eight
+successful first attempts and an observed difficulty span of at least
+0.5 bits (or 40 CSS pixels on Distance, 8 CSS pixels on Size).
+Horizontal and Circular fits also require at least two planned
+conditions with two successful observations each. Interface targets vary
+in both size and distance. Lines stop at the observed range; no trials
+are removed just for being slow. Equations, sample sizes, and R²
+describe the successful observations, with misses displayed
+separately.</p>
 <p>Input mode, device, gain, perturbation, jitter amplitude, task, and
 application version define separate fit groups. Classroom lines pool
 successful first attempts within each group, so participants
@@ -213,14 +214,17 @@ contributing more trials have more weight. Larger student–run–condition
 mean markers still require at least three successful observations. These
 lines are descriptive; they do not estimate a causal effect or account
 for repeated measurements with a mixed-effects model.</p>
-<p>Horizontal and Circular each have six planned distance–width
-conditions. The combined view uses square, circle, and diamond glyphs
-for Horizontal, Circles, and Interfaces. Classroom color identifies the
-participant and matches the participant tiles; selecting one dims
-others. Hollow glyphs indicate misses. Fits remain separate by stage and
-input settings (solid Horizontal, dashed Circles, dotted Interfaces).
-Boundary conditions remain in the adjacent paired chart because hard
-edges have no scalar index of difficulty.</p>
+<p>Horizontal and Circular each have sixteen planned distance–width
+combinations, with two observations per combination before misses. The
+combined view uses square, circle, and diamond glyphs for Horizontal,
+Circles, and Interfaces. Classroom color identifies the participant and
+matches the participant tiles; selecting one dims others. Hollow glyphs
+indicate misses. Fits remain separate by stage and input settings (solid
+Horizontal, dashed Circles, dotted Interfaces). Free interface
+selections appear in the combined view. Hard-edge sets remain in the
+adjacent paired chart because hard edges have no scalar index of
+difficulty. The Stage legend shows point glyphs; the separate Trendline
+legend shows the line styles.</p>
 <p>A fixed nominal distance gets no distance-axis trend from off-center
 click variation alone. Trajectory, speed, and landing plots retain their
 measured traces and target references.</p>
@@ -237,10 +241,11 @@ variable, including while the view is frozen.</p>
 <p>The boundary chart connects each student run within a matched pair,
 protocol version, and consistent input settings. Only approaches to menu
 or window controls enter this comparison; the intervening button
-selections remain in the exported data. A bold summary line averages the
-run means from complete free/edge pairs, with equal weight per complete
-run and separate protocol/input groups. Its timing statistic is the mean
-of successful first attempts; point tooltips report the corresponding
+selections remain in the exported data, and those from free sets also
+appear in the combined plot. A bold summary line averages the run means
+from complete free/edge pairs, with equal weight per complete run and
+separate protocol/input groups. Its timing statistic is the mean of
+successful first attempts; point tooltips report the corresponding
 first-attempt error rate and sample size. It is a paired visualization,
 not an inferential effect estimate. No throughput is calculated from
 clamped endpoint variance.</p>
@@ -291,4 +296,4 @@ Classroom regressions still pool observations within protocol/input
 groups: students who repeat contribute more observations. Repeats are
 not additional independent students. Records made before run IDs were
 added appear as Earlier results.</p>
-<footer>Fitts Lab 1.1.1 · <a href="METHODS.md">Markdown source</a></footer></main></body></html>
+<footer>Fitts Lab 1.2.0 · <a href="METHODS.md">Markdown source</a></footer></main></body></html>

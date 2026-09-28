@@ -2,7 +2,7 @@ import {nextRun,completedStages} from './runs.js';
 import {CONFIG} from '../config.js';
 import {$,$$,text,toast,common,download,csv} from './ui.js';
 import {ArenaController} from './engine.js';
-import {protocol,horizontalSequence,buttonSequence,boundarySequence,BUTTON_SETS,TASKS,TASK_LABELS,planLabel,taskHint,VERSION} from './protocol.js';
+import {protocol,circleSequence,buttonSequence,boundarySequence,BUTTON_SETS,TASKS,TASK_LABELS,planLabel,taskHint,VERSION} from './protocol.js';
 import {hash,firstAttempts,mean,nearFar,pathRows,speedRows,endpointRows} from './math.js';
 import {boundaryRows,trendlines,trendCaption,plotAxis} from './analysis.js';
 import {Chart} from './charts.js';
@@ -15,9 +15,9 @@ const person=identity(),localLabel='P-'+person.slice(0,6).toUpperCase();
 let rows=[],sets=[],currentSet=null,task='horizontal',progress=saved('progress',{}),membership=null,joinCandidate=null;
 let refreshTimer=null,saveFailed=false,resultExtent=1600,resultAxis='index_difficulty';
 try{rows=await all('trials');sets=await all('sets');sets.sort((a,b)=>a.created_at.localeCompare(b.created_at));}catch(e){saveFailed=true;toast('Persistent storage is unavailable. Export your measurements before closing this page.',true);}
-if(!saved('horizontal-protocol-v7',false)){progress.horizontal=0;save('progress',progress);save('horizontal-protocol-v7',true);}
-if(!saved('circles-protocol-v4',false)){progress.circles=0;save('progress',progress);save('circles-protocol-v4',true);}
-if(!saved('interfaces-protocol-v7',false)){progress.interfaces=0;save('progress',progress);save('interfaces-protocol-v7',true);}
+if(!saved('horizontal-protocol-v8',false)){progress.horizontal=0;save('progress',progress);save('horizontal-protocol-v8',true);}
+if(!saved('circles-protocol-v5',false)){progress.circles=0;save('progress',progress);save('circles-protocol-v5',true);}
+if(!saved('interfaces-protocol-v8',false)){progress.interfaces=0;save('progress',progress);save('interfaces-protocol-v8',true);}
 const charts={paths:new Chart('#path-chart'),speed:new Chart('#speed-chart'),endpoints:new Chart('#endpoint-chart'),combined:new Chart('#combined-results'),interfaces:new Chart('#interface-results')};
 const outbox=new Outbox(({pending,message,blocked})=>{
   text('#saved-count',`${rows.length} attempts saved${saveFailed?' in memory only':''}${pending?` · ${pending} awaiting upload`:''}`);
@@ -39,14 +39,11 @@ function selectedPlan(){
     p.distance=Number($('#distance-control').value);p.width=Number($('#width-control').value);p.height=task==='horizontal'?300:Number($('#height-control').value);
     if(task==='interfaces')p.variant=$('#interface-variant').value;
     if(task==='horizontal')delete p.positions;
-    p.custom=true;p.condition=`explore-${p.task}-${p.variant}-${p.distance}-${p.width}-${p.height}`;p.count=task==='horizontal'?12:task==='circles'?9:8;
+    p.custom=true;p.condition=`explore-${p.task}-${p.variant}-${p.distance}-${p.width}-${p.height}`;p.count=8;
     p.layoutSeed=hash(`${person}-explore-${p.variant}-${sets.length}`);
+    if(task==='circles')p.sequence=circleSequence(p.layoutSeed);
     if(task==='interfaces'&&/^(menu|corner)-/.test(p.variant))p.positions=boundarySequence(p);
     else if(task==='interfaces')delete p.positions;
-  }else if(task==='horizontal'){
-    const completed=sets.filter(s=>s.task==='horizontal'&&s.state==='complete'&&s.plan.width===p.width&&s.plan.block!==undefined&&s.plan.protocolVersion===VERSION&&s.options?.runId===currentRun.id).length;
-    p.layoutSeed=hash(`${person}-${currentRun.id}-horizontal-${p.width}-${Math.floor(completed/3)}`);
-    p.positions=horizontalSequence(p.width,p.layoutSeed).slice(p.block*12,p.block*12+13);
   }else if(task==='interfaces'){
     const pair=p.variant.startsWith('menu')?'menu':p.variant.startsWith('corner')?'corner':p.variant;
     const completed=sets.filter(s=>s.task==='interfaces'&&s.state==='complete'&&s.plan.protocolVersion===VERSION&&s.options?.runId===currentRun.id&&
@@ -145,7 +142,7 @@ async function renderMini(){
 async function renderResults(){
   const perturbation=$('#result-condition').value;
   const selectedRun=$('#result-run').value,runRows=selectedRun==='all'?rows:rows.filter(r=>(r.run_id||'legacy')===selectedRun);
-  const rs=firstAttempts(runRows,{perturbation}).filter(r=>Number.isFinite(r.index_difficulty)&&(r.task!=='interfaces'||/^buttons-|^(wide|tall)$/.test(r.variant)));
+  const rs=firstAttempts(runRows,{perturbation}).filter(r=>Number.isFinite(r.index_difficulty)&&!/-edge$/.test(r.variant));
   if(rs.length){
     resultExtent=Math.max(resultExtent,Math.ceil(Math.max(...rs.map(r=>r.acquisition_ms))/500)*500);
     const trend=trendlines(rs,resultAxis);await charts.combined.set(scatterSpec({height:340,extent:resultExtent,x:resultAxis,xMax:plotAxis(rs,resultAxis).maximum}),{trials:rs,means:[],fit:trend.lines});
@@ -227,6 +224,6 @@ $('#mobile-warning').hidden=matchMedia('(pointer:fine)').matches;
 const incomplete=[...sets].reverse().find(s=>s.task===task&&s.state!=='complete'&&s.completed>0&&s.plan&&s.options&&
   s.options.roomId===(membership?.room.id||null)&&s.options.inputMode===options(s.plan).inputMode&&
   (s.plan.protocolVersion===VERSION)&&s.options.runId===currentRun.id&&
-  (s.task!=='horizontal'||s.plan.positions?.length===s.plan.count+1||s.plan.custom&&s.plan.count===12));
+  (s.task!=='horizontal'||s.plan.positions?.length===s.plan.count+1||s.plan.custom&&s.plan.count===8));
 if(incomplete){prepare(incomplete.plan,incomplete);toast('Recovered an unfinished set. Resume with an unscored starting click.');}
 window.addEventListener('beforeunload',e=>{if(arena.active()){e.preventDefault();e.returnValue='';}});

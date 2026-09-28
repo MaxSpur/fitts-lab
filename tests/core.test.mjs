@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {nearFar,shannon,approachWidth,constrainedMove,regression,downsample,seeded} from '../src/math.js';
-import {protocol,targetFor,homeFor,buttonSequence,boundaryLayout,BUTTON_SETS,HORIZONTAL_DISTANCES,boundsFor,VERSION} from '../src/protocol.js';
+import {protocol,targetFor,homeFor,buttonSequence,boundaryLayout,BUTTON_SETS,HORIZONTAL_DISTANCES,TARGET_SIZES,CIRCLE_SITES,circleSite,circleSequence,boundsFor,VERSION} from '../src/protocol.js';
 import {TrialEngine} from '../src/engine.js';
 import {boundaryRows,trendlines} from '../src/analysis.js';
 import {simulationRows} from '../src/simulation.js';
@@ -11,23 +11,18 @@ test('Shannon difficulty is invariant under uniform scaling',()=>assert.equal(sh
 test('near/far formulation and infinite limits are mathematically distinct',()=>{assert.equal(nearFar(100,300),Math.log2(2));assert.equal(nearFar(100,Infinity),0);assert.equal(nearFar(100,Infinity,'welford'),0);assert.equal(nearFar(100,Infinity,'shannon'),Math.log2(1.5));assert.equal(nearFar(100,100),null);});
 test('rectangle chord uses approach direction, not bounding-box projection',()=>{assert.equal(approachWidth(100,20,1,0),100);assert.equal(approachWidth(100,20,0,1),20);assert.ok(Math.abs(approachWidth(100,20,1,1)-20*Math.SQRT2)<1e-9);});
 test('overshoot is discarded; reversal immediately moves away from edge',()=>{const b={left:100,right:960,top:78,bottom:460};const q=constrainedMove({x:120,y:100},-1000,-1000,b);assert.deepEqual(q,{x:100,y:78});assert.deepEqual(constrainedMove(q,1,1,b),{x:101,y:79});});
-test('guided horizontal sets keep width fixed and balance varied distances',()=>{
-  const ps=protocol('horizontal','layout-test');
-  assert.equal(ps.length,6);assert.deepEqual(ps.map(p=>p.width).sort((a,b)=>a-b),[24,24,24,64,64,64]);
+test('guided horizontal paths balance four distances at each of four sizes',()=>{
+ for(let seed=0;seed<128;seed++){
+  const ps=protocol('horizontal',String(seed));
+  assert.deepEqual(ps.map(p=>p.width).sort((a,b)=>a-b),TARGET_SIZES);
   for(const p of ps){
-    assert.equal(p.count,12);assert.equal(p.positions.length,13);
-    const distances=Array.from({length:p.count},(_,i)=>Math.abs(targetFor(p,i+1).x-targetFor(p,i).x));
-    assert.ok(distances.every((d,i)=>!i||d!==distances[i-1]));
-    assert.ok(new Set(p.positions).size>3);
-    assert.ok(Array.from({length:p.count+1},(_,i)=>targetFor(p,i)).every(t=>t.x-t.w/2>0&&t.x+t.w/2<960));
+   assert.equal(p.count,8);assert.equal(p.positions.length,9);
+   const distances=p.positions.slice(1).map((x,i)=>Math.abs(x-p.positions[i]));
+   for(const d of HORIZONTAL_DISTANCES)assert.equal(distances.filter(v=>v===d).length,2);
+   assert.ok(distances.every((d,i)=>!i||d!==distances[i-1]));
+   assert.ok(p.positions.every(x=>x-p.width/2>0&&x+p.width/2<960));
   }
-  for(const w of [24,64]){
-    const run=ps.filter(p=>p.width===w).sort((a,b)=>a.block-b.block);
-    const distances=run.flatMap(p=>Array.from({length:p.count},(_,i)=>Math.abs(p.positions[i+1]-p.positions[i])));
-    for(const d of HORIZONTAL_DISTANCES)assert.equal(distances.filter(v=>v===d).length,12);
-    assert.ok(distances.every((d,i)=>!i||d!==distances[i-1]));
-    for(let i=1;i<run.length;i++)assert.equal(run[i-1].positions.at(-1),run[i].positions[0]);
-  }
+ }
 });
 test('guided horizontal records use designed trial distances as conditions',()=>{
   const p=protocol('horizontal','record-test')[0],{e,rows}=engine(p);
@@ -49,23 +44,37 @@ test('fixed-distance exploration can reposition its pair with an unscored start'
   e.click(e.target,650);assert.equal(rows[4].acquisition_ms,150);
   assert.ok(Math.abs(rows[4].nominal_distance-p.distance)<1e-3);
 });
-test('ring has twelve distinct directions and actual chords shorter than its diameter',()=>{const p=protocol('circles')[0],a=targetFor(p,0),b=targetFor(p,1);assert.equal(p.count,12);assert.equal(new Set(Array.from({length:12},(_,i)=>`${targetFor(p,i).x},${targetFor(p,i).y}`)).size,12);assert.ok(Math.hypot(a.x-b.x,a.y-b.y)<p.distance);});
-test('guided interface buttons form varied serial sequences',()=>{
-  const ps=protocol('interfaces','layout-test');
-  assert.equal(ps.length,5);
-  assert.equal(ps[0].variant,'buttons-varied');
-  assert.deepEqual(ps.slice(1).map(p=>p.variant),['menu-floating','menu-edge','corner-floating','corner-edge']);
-  for(const p of ps.slice(0,1)){
-    assert.equal(p.count,24);
-    const targets=Array.from({length:p.count+1},(_,i)=>targetFor(p,i));
-    assert.equal(new Set(targets.map(t=>`${t.x},${t.y}`)).size,25);
-    assert.ok(new Set(targets.map(t=>t.w)).size>=4);
-    assert.ok(new Set(targets.map(t=>t.h)).size>=4);
-    assert.ok(targets.every(t=>t.w/t.h>=2));
-    assert.ok(targets.every(t=>t.x-t.w/2>0&&t.x+t.w/2<960&&t.y-t.h/2>0&&t.y+t.h/2<460));
-    assert.ok(targets.every((t,i)=>!i||Math.hypot(t.x-targets[i-1].x,t.y-targets[i-1].y)>=145));
-    assert.deepEqual(p.positions,buttonSequence(p.variant,p.layoutSeed));
+test('circular random paths visit distinct sites and balance four chord lengths',()=>{
+ const sequences=new Set();
+ for(let seed=0;seed<128;seed++){
+  const ps=protocol('circles',String(seed));
+  assert.deepEqual(ps.map(p=>p.width).sort((a,b)=>a-b),TARGET_SIZES);
+  for(const p of ps){
+   assert.equal(p.count,8);assert.equal(new Set(p.sequence).size,9);
+   assert.deepEqual(p.sequence,circleSequence(p.layoutSeed));sequences.add(p.sequence.join(','));
+   const steps=p.sequence.slice(1).map((x,i)=>{const d=Math.abs(x-p.sequence[i]);return Math.min(d,CIRCLE_SITES-d);});
+   for(const d of [1,3,5,7])assert.equal(steps.filter(v=>v===d).length,2);
+   for(let i=0;i<CIRCLE_SITES;i++){
+    const t=circleSite(p,i),next=circleSite(p,(i+1)%CIRCLE_SITES);
+    assert.ok(Math.hypot(t.x-next.x,t.y-next.y)>p.width,'visible circles do not overlap');
+    assert.ok(t.y-t.h/2>0&&t.y+t.h/2<460);
+   }
+   for(let i=1;i<=8;i++)assert.deepEqual(homeFor(p,i),targetFor(p,i));
   }
+ }
+ assert.ok(sequences.size>100);
+});
+test('guided interfaces use four eight-selection mixed button/control sets, free first',()=>{
+ const ps=protocol('interfaces','layout-test');
+ assert.deepEqual(ps.map(p=>p.variant),['menu-floating','menu-edge','corner-floating','corner-edge']);
+ for(const p of ps){
+  assert.equal(p.count,8);assert.equal(p.positions.length,9);
+  assert.ok(new Set(p.positions.map(t=>t.w)).size>=4);
+  for(let i=1;i<=8;i++){
+   const t=targetFor(p,i);assert.equal(Boolean(t.label),i%2===1);
+   assert.ok(t.x-t.w/2>0&&t.x+t.w/2<960&&t.y-t.h/2>0&&t.y+t.h/2<460);
+  }
+ }
 });
 test('button selections continue from the previous click without another Home',()=>{
   const p=protocol('interfaces','serial-test')[0],{e,rows}=engine(p);
@@ -74,7 +83,7 @@ test('button selections continue from the previous click without another Home',(
     e.click(e.target,(i+1)*100);
     if(i<p.count-1){assert.equal(e.state,'running');assert.equal(e.start.x,rows.at(-1).click_x);assert.equal(e.start.y,rows.at(-1).click_y);}
   }
-  assert.equal(rows.length,24);assert.equal(e.state,'complete');
+  assert.equal(rows.length,8);assert.equal(e.state,'complete');
 });
 test('matched menu and window pairs use serial controls and aligned boundaries',()=>{
   const ps=protocol('interfaces','layout-test');
@@ -123,14 +132,14 @@ test('boundary chart only connects comparable input conditions',()=>{
 });
 test('classroom preview follows current guided task lengths and includes circles',()=>{
   const rows=simulationRows(1,28);
-  assert.deepEqual(['horizontal','circles','interfaces'].map(t=>rows.filter(r=>r.task===t).length),[72,72,72]);
-  assert.equal(rows.filter(r=>r.variant==='buttons-varied').length,24);
+  assert.deepEqual(['horizontal','circles','interfaces'].map(t=>rows.filter(r=>r.task===t).length),[32,32,32]);
+  assert.equal(rows.filter(r=>r.task==='interfaces'&&Number.isFinite(r.index_difficulty)).length,16);
   assert.equal(boundaryRows(rows).length,4);
 });
 test('ingress validation strips client identities and recomputes difficulty',()=>{const{e,rows}=engine();e.activate();e.click(e.home,0);e.click(e.target,300);const r={...rows[0],index_difficulty:999,participant_id:'FAKE',path:downsample(rows[0].path,40)};const v=validateTrial(r);assert.equal(v.participant_id,undefined);assert.notEqual(v.index_difficulty,999);assert.equal(v.hit,true);});
 test('ingress rejects invalid values and oversized telemetry',()=>{const{e,rows}=engine();e.activate();e.click(e.home,0);e.click(e.target,300);assert.throws(()=>validateTrial({...rows[0],acquisition_ms:NaN}));assert.throws(()=>validateTrial({...rows[0],path:Array(41).fill({x:1,y:1,t:1})}));});
 test('ingress accepts system-cursor ordinary buttons but requires capture for hard boundaries',()=>{
-  const wide=protocol('interfaces','input-test').find(p=>BUTTON_SETS.includes(p.variant));
+  const wide={task:'interfaces',variant:'buttons-varied',condition:'buttons-varied',count:8,positions:buttonSequence('buttons-varied',42)};
   const a=engine(wide);a.e.activate();a.e.click(a.e.home,0);a.e.click(a.e.target,300);
   assert.equal(validateTrial(a.rows[0]).input_mode,'native');
   assert.equal(validateTrial({...a.rows[0],variant:'buttons-standard'}).variant,'buttons-standard');
@@ -150,9 +159,9 @@ test('downsampling preserves both endpoints and seed is reproducible',()=>{const
   assert.equal(trendlines(rows.map(r=>({...r,condition:'fixed'}))).fits.length,0);
   assert.equal(trendlines(rows.map(r=>({...r,nominal_distance:300})),'distance').fits.length,0);
  });
- test('three circular distances and two widths support ID and distance trends',()=>{
+ test('four circular distances and four widths support ID and distance trends',()=>{
   const rows=simulationRows(1).filter(r=>r.task==='circles');
-  assert.ok(rows.every(r=>r.nominal_distance>170&&r.nominal_distance<370));
+  assert.ok(rows.every(r=>r.nominal_distance>70&&r.nominal_distance<354));
   assert.equal(trendlines(rows).fits.length,1);
   assert.equal(trendlines(rows,'distance').fits.length,1);
  });
@@ -165,14 +174,24 @@ test('session labels reflect ended, draining and expired admission',()=>{
  assert.equal(sessionState(r,now+3600001).label,'Expired');
  assert.match(sessionLabel({...r,status:'closed'}),/Ended/);
 });
-test('all stages have 72 selections and circular distances vary independently of target size',()=>{
- for(const task of ['horizontal','circles','interfaces'])assert.equal(protocol(task,'balanced').reduce((n,p)=>n+p.count,0),72);
- for(const width of [22,44]){const ps=protocol('circles','balanced').filter(p=>p.width===width);assert.equal(ps.length,3);assert.deepEqual(ps.map(p=>p.distance).sort((a,b)=>a-b),[180,280,380]);assert.ok(ps.every(p=>p.count===12));}
+test('each stage has four sets of eight scored selections',()=>{
+ for(const task of ['horizontal','circles','interfaces']){
+  const ps=protocol(task,'balanced');assert.equal(ps.length,4);assert.ok(ps.every(p=>p.count===8));
+ }
+});
+test('circular engine records the planned chord as its condition',()=>{
+ const p=protocol('circles','record-test')[0],{e,rows}=engine(p);
+ e.activate();e.click(e.home,0);
+ for(let i=1;i<=8;i++){
+  e.click(e.target,i*100);
+  assert.equal(rows.at(-1).condition,`circles-${Math.round(rows.at(-1).nominal_distance)}-${p.width}`);
+ }
+ assert.equal(rows.length,8);assert.equal(e.state,'complete');
 });
 
 test('size trends require actual size variation and exclude failed attempts',()=>{
  const rows=simulationRows(1).filter(r=>r.task==='circles');
  const fit=trendlines(rows,'approach_width');assert.equal(fit.fits.length,1);
  assert.ok(fit.fits[0].b<0);assert.ok(fit.lines.every(r=>Number.isFinite(r.approach_width)));
- assert.equal(trendlines(rows.filter(r=>r.target_w===22),'approach_width').fits.length,0);
+ assert.equal(trendlines(rows.filter(r=>r.target_w===20),'approach_width').fits.length,0);
 });

@@ -1,38 +1,37 @@
 import {hash,seeded,shuffled} from './math.js';
-export const VERSION='1.1.1';
+export const VERSION='1.2.0';
 export const ARENA={width:960,height:460};
 export const TASKS=['horizontal','circles','interfaces'];
 export const TASK_LABELS={horizontal:'Horizontal',circles:'Circles',interfaces:'Interfaces'};
 export const BUTTON_SETS=['buttons-varied'];
 export const INTERFACE_ORDER=['menu-floating','menu-edge','corner-floating','corner-edge'];
 export const HORIZONTAL_BLOCK_SIZE=4;
-export const HORIZONTAL_DISTANCES=[160,360,560];
+export const HORIZONTAL_DISTANCES=[120,240,360,480];
+export const TARGET_SIZES=[20,32,48,64];
+export const CIRCLE_SITES=16;
 export const VARIANTS={'buttons-varied':'Buttons · varied sizes','buttons-compact':'Buttons · compact','buttons-standard':'Buttons · standard',wide:'Wide button',tall:'Tall button','menu-floating':'Menu · free','menu-edge':'Menu · edge','corner-floating':'Window control · free','corner-edge':'Window control · edges'};
 export function protocol(task,identity='local') {
   const seed=hash(identity);
-  if(task==='horizontal'){
-    const widths=shuffled([24,64],seed);
-    return Array.from({length:3},(_,block)=>widths.map(w=>{
-      const layoutSeed=hash(`${identity}-horizontal-${w}-0`);
-      return{task,variant:'strips',width:w,height:300,count:12,block,condition:`horizontal-mixed-${w}`,
-        layoutSeed,positions:horizontalSequence(w,layoutSeed).slice(block*12,block*12+13)};
-    })).flat();
-  }
-  if(task==='circles')return shuffled([180,280,380],seed).flatMap(distance=>shuffled([44,22],seed+distance).map(width=>({task,variant:'ring',distance,width,height:width,count:12,condition:`circles-12-${distance}-${width}`,layoutSeed:hash(`${identity}-circle-${distance}-${width}`)})));
-  const variant=BUTTON_SETS[0],layoutSeed=hash(`${identity}-${variant}`);
-  const buttons={task,variant,count:24,condition:variant,layoutSeed,positions:buttonSequence(variant,layoutSeed)};
+  if(task==='horizontal')return shuffled(TARGET_SIZES,seed).map(width=>{
+    const layoutSeed=hash(`${identity}-horizontal-${width}`);
+    return{task,variant:'strips',width,height:300,count:8,condition:`horizontal-mixed-${width}`,layoutSeed,positions:horizontalSequence(width,layoutSeed)};
+  });
+  if(task==='circles')return shuffled(TARGET_SIZES,seed).map(width=>{
+    const layoutSeed=hash(`${identity}-circles-${width}`);
+    return{task,variant:'ring',distance:360,width,height:width,count:8,condition:`circles-random-${width}`,layoutSeed,sequence:circleSequence(layoutSeed)};
+  });
   // Keep free/edge geometry and captured input matched within each boundary pair.
   const pairs=[['menu-floating','menu-edge'],['corner-floating','corner-edge']];
   const edges=pairs.flat().map(variant=>{
     const layoutSeed=hash(identity+'-'+(variant.startsWith('menu')?'menu':'corner'));
-    const p={task,variant,count:12,condition:variant,layoutSeed};
+    const p={task,variant,count:8,condition:variant,layoutSeed};
     return{...p,positions:boundarySequence(p)};
   });
-  return [buttons,...edges];
+  return edges;
 }
 export function planLabel(p) {
-  if(p.task==='horizontal')return p.positions?`${p.width}px wide · varied distance · ${p.block+1}/3`:`${p.distance}px apart · ${p.width}px wide`;
-  if(p.task==='circles')return `${Math.round(p.distance*Math.sin(5*Math.PI/12))}px travel · ${p.width}px circles`;
+  if(p.task==='horizontal')return p.positions?`${p.width}px wide · varied distance`:`${p.distance}px apart · ${p.width}px wide`;
+  if(p.task==='circles')return `${p.width}px circles · ${p.sequence?'varied distance':p.distance+'px ring'}`;
   return VARIANTS[p.variant];
 }
 function varied(points,seed,spreadX,spreadY){
@@ -82,7 +81,7 @@ export function targetFor(p,index) {
     const block=Math.floor((index-1)/HORIZONTAL_BLOCK_SIZE);
     return horizontalPair(p,block)[index%2?1:0];
   }
-  if(p.task==='circles'){const phase=p.layoutSeed===undefined?0:p.layoutSeed%12,a=2*Math.PI*((phase+index*5)%12)/12;return{x:480+p.distance/2*Math.cos(a),y:230+p.distance/2*Math.sin(a),w:p.width,h:p.width,shape:'circle'};}
+  if(p.task==='circles'){if(p.sequence)return circleSite(p,p.sequence[Math.min(index,p.sequence.length-1)]);const phase=p.layoutSeed===undefined?0:p.layoutSeed%12,a=2*Math.PI*((phase+index*5)%12)/12;return{x:480+p.distance/2*Math.cos(a),y:230+p.distance/2*Math.sin(a),w:p.width,h:p.width,shape:'circle'};}
   if(BUTTON_SETS.includes(p.variant))return p.positions[Math.min(index,p.positions.length-1)];
   if(p.variant.startsWith('menu')||p.variant.startsWith('corner')){
     const positions=p.positions||boundarySequence(p);return positions[Math.min(index,positions.length-1)];
@@ -95,12 +94,12 @@ export function targetFor(p,index) {
   const position=buttons[index%buttons.length];
   return{...position,w,h,shape:'rect'};
 }
-/** A seeded serial path: twelve movements at each designed distance. */
+/** A seeded serial path: two movements at each of four designed distances. */
 export function horizontalSequence(width,seed){
   const rand=seeded(seed),lo=64+width/2,hi=896-width/2;
-  const counts=HORIZONTAL_DISTANCES.map(()=>12),total=counts.length*12;
+  const counts=HORIZONTAL_DISTANCES.map(()=>2),total=counts.length*2;
   for(const start of shuffled([400,440,520,560],seed)){
-    counts.fill(12);const path=[start],failed=new Set();
+    counts.fill(2);const path=[start],failed=new Set();
     const walk=(x,previous=-1)=>{
       if(path.length===total+1)return true;
       const key=`${x}|${previous}|${counts.join(',')}`;
@@ -149,10 +148,25 @@ export function boundsFor(p,index=0) {
 export const isBoundary=p=>['menu-edge','corner-edge'].includes(p.variant);
 export function taskHint(p) {
   if(p.task==='horizontal')return p.positions?'Follow each highlighted strip. Width stays fixed; distance changes each trial.':'Alternate four times, then click the new start marker. Each start click is unscored.';
-  if(p.task==='circles')return 'Click the highlighted circle, then the next. Follow the nearly opposite sequence.';
+  if(p.task==='circles')return 'Click the highlighted circle, then the next. Connections vary in distance and direction.';
   if(BUTTON_SETS.includes(p.variant))return 'Click the starting button once, then follow each highlighted button without returning to Start. Size and position change each trial.';
   if(p.variant==='menu-edge')return 'Follow the buttons and menu items. The top edge stops vertical overshoot.';
   if(p.variant==='corner-edge')return 'Follow the buttons and window controls. The top and left edges catch overshoot.';
-  if(p.variant.includes('floating'))return 'Follow the same sequence with the boundary switched off.';
+  if(p.variant.includes('floating'))return 'Follow the buttons and controls. You can overshoot the marked boundary.';
   return 'Approach the button from below. Click Home between selections.';
+}
+
+/** Sixteen visible sites; a balanced random walk visits nine distinct targets. */
+export function circleSite(p,index){const a=2*Math.PI*index/CIRCLE_SITES;return{x:480+p.distance/2*Math.cos(a),y:230+p.distance/2*Math.sin(a),w:p.width,h:p.width,shape:'circle'};}
+export function circleSequence(seed){
+  const rand=seeded(seed),steps=[1,3,5,7],remaining=[2,2,2,2],path=[seed%CIRCLE_SITES];
+  function walk(previous=-1){
+    if(path.length===9)return true;
+    const choices=[];
+    steps.forEach((step,i)=>{if(!remaining[i]||i===previous)return;for(const sign of [-1,1]){const next=(path.at(-1)+sign*step+CIRCLE_SITES)%CIRCLE_SITES;if(!path.includes(next))choices.push({i,next,rank:rand()});}});
+    choices.sort((a,b)=>remaining[b.i]-remaining[a.i]||a.rank-b.rank);
+    for(const {i,next}of choices){remaining[i]--;path.push(next);if(walk(i))return true;path.pop();remaining[i]++;}
+    return false;
+  }
+  if(!walk())throw new Error('Could not lay out circular sequence.');return path;
 }

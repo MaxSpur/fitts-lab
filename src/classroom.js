@@ -48,7 +48,7 @@ function setupRoomControls(){
   $('#end-room').disabled=!state.open;$('#delete-room').disabled=!room;$('#reset-data').disabled=!room;$('#room-list').closest('div').hidden=source==='local';$('#capacity').closest('label').hidden=source==='local';
 }
 function schedule(){dirty=true;if(renderTimer||rendering||frozen)return;renderTimer=setTimeout(async()=>{renderTimer=null;if(!dirty||frozen)return;dirty=false;rendering=true;try{await render();}catch(e){toast('Chart update failed: '+e.message,true);console.error(e);}finally{rendering=false;if(dirty)schedule();}},450);}
-function filterRows(){const task=$('#task-filter').value,noise=$('#noise-filter').value,device=$('#device-filter').value;return firstAttempts([...records.values()],{...(task==='all'?{}:{task}),perturbation:noise}).filter(r=>(device==='all'||r.device===device)&&Number.isFinite(r.index_difficulty)&&(r.task!=='interfaces'||/^buttons-|^(wide|tall)$/.test(r.variant)));}
+function filterRows(){const task=$('#task-filter').value,noise=$('#noise-filter').value,device=$('#device-filter').value;return firstAttempts([...records.values()],{...(task==='all'?{}:{task}),perturbation:noise}).filter(r=>(device==='all'||r.device===device)&&Number.isFinite(r.index_difficulty)&&!/-edge$/.test(r.variant));}
 async function render(){
   if(frozen)return;const generation=sourceGeneration;const allRows=[...records.values()],allFirst=firstAttempts(allRows,{perturbation:'all'}),rs=filterRows();
   text('#participant-count',participants.size);text('#mosaic-count',datasets.size);text('#attempt-count',records.size.toLocaleString());text('#error-count',allFirst.length?`${(100*allFirst.filter(r=>!r.hit).length/allFirst.length).toFixed(1)}%`:'—');

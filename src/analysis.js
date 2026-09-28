@@ -31,7 +31,7 @@ export function trendlines(rows,x='index_difficulty'){
     if(x==='approach_width'&&a.every(r=>['horizontal','circles'].includes(r.task))&&new Set(a.map(r=>Math.round(r.target_w))).size<2)continue;
     const varied=a.every(r=>/^buttons-/.test(r.variant));
     const conditions=new Map();for(const r of a)conditions.set(r.condition,(conditions.get(r.condition)||0)+1);
-    if(!varied&&[...conditions.values()].filter(n=>n>=3).length<2)continue;
+    if(!varied&&[...conditions.values()].filter(n=>n>=2).length<2)continue;
     const fit=regression(a,x,'acquisition_ms',2);if(!fit)continue;
     const label=`${a[0].input_mode} · ${a[0].device} · ${a[0].perturbation} · ${a[0].gain}× · ${a[0].app_version}`;
     fits.push({...fit,label,task:a[0].task,settings:[a[0].input_mode,a[0].device,a[0].perturbation,`${a[0].gain}×`,a[0].app_version,`${a[0].jitter_css_px||0}px jitter`]});

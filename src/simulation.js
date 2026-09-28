@@ -11,7 +11,7 @@ export function simulationRows(nPeople=24,seed=28){
       const w=t.shape==='circle'?t.w:approachWidth(t.w,t.h,dx,dy),edge=isBoundary(p),id=edge?null:shannon(d,w);
       const mt=Math.max(120,a+b*(id??2)+(rand()-.5)*180),hit=rand()>.055;
       const clickX=t.x+(hit?(rand()-.5)*t.w*.6:t.w*.65),clickY=t.y+(rand()-.5)*t.h*.6;
-      const condition=task==='horizontal'?`horizontal-${Math.round(d)}-${p.width}`:
+      const condition=task==='horizontal'?`horizontal-${Math.round(d)}-${p.width}`:task==='circles'&&p.sequence?`circles-${Math.round(d)}-${p.width}`:
         task==='interfaces'&&!BUTTON_SETS.includes(p.variant)?`${p.variant}-${j%2?'between':'control'}`:p.condition;
       rows.push({schema_version:1,app_version:VERSION,id:crypto.randomUUID(),participant_id:pid,
         run_id:runId,run_number:1,participant_label:'DEMO '+String(i+1).padStart(2,'0'),source:'simulation',task,variant:p.variant,condition,

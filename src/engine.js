@@ -1,4 +1,4 @@
-import {ARENA,VERSION,HORIZONTAL_BLOCK_SIZE,BUTTON_SETS,boundaryFrame,targetFor,horizontalPair,homeFor,boundsFor,isBoundary} from './protocol.js';
+import {ARENA,VERSION,CIRCLE_SITES,circleSite,HORIZONTAL_BLOCK_SIZE,BUTTON_SETS,boundaryFrame,targetFor,horizontalPair,homeFor,boundsFor,isBoundary} from './protocol.js';
 import {distance,hitTarget,approachWidth,shannon,round,downsample,constrainedMove,jitterAt,clamp} from './math.js';
 
 /** Experiment state machine, independent of the DOM and the network.
@@ -27,7 +27,7 @@ export class TrialEngine {
     const d=Math.hypot(dx,dy),boundary=isBoundary(this.plan),o=this.options;
     const nominal=distance(this.getHome(),t);
     const condition=this.plan.task==='horizontal'&&this.plan.positions?
-      `horizontal-${Math.round(nominal)}-${this.plan.width}`:this.plan.task==='interfaces'&&!this.plan.custom&&/^(menu|corner)-/.test(this.plan.variant)&&this.plan.positions?
+      `horizontal-${Math.round(nominal)}-${this.plan.width}`:this.plan.task==='circles'&&this.plan.sequence&&!this.plan.custom?`circles-${Math.round(nominal)}-${this.plan.width}`:this.plan.task==='interfaces'&&!this.plan.custom&&/^(menu|corner)-/.test(this.plan.variant)&&this.plan.positions?
       `${this.plan.variant}-${this.count%2?'between':'control'}`:this.plan.condition;
     const r={schema_version:1,source:'participant',app_version:VERSION,id:crypto.randomUUID(),set_id:this.id,movement_id:this.movementId,
       ...(o.runId?{run_id:o.runId,run_number:o.runNumber}:{}),participant_id:o.participantId,participant_label:o.participantLabel,room_id:o.roomId||null,
@@ -163,7 +163,7 @@ export class ArenaController {
       c.fillStyle='#798596';c.font='12px system-ui';c.textAlign='center';c.fillText('ONE-DIMENSIONAL TRACK · VERTICAL MOTION IGNORED',480,422);
     }else if(p.task==='circles'){
       c.strokeStyle='#d8e0e9';c.setLineDash([3,7]);c.beginPath();c.arc(480,230,p.distance/2,0,2*Math.PI);c.stroke();c.setLineDash([]);
-      for(let i=0;i<12;i++)this.drawTarget(targetFor(p,i),false);
+      for(let i=0;i<(p.sequence?CIRCLE_SITES:12);i++)this.drawTarget(p.sequence?circleSite(p,i):targetFor(p,i),false);
     }else if(BUTTON_SETS.includes(p.variant)){
       c.strokeStyle='#e0e4e9';c.lineWidth=1;c.strokeRect(44,54,872,350);
       if(e.state==='running')this.drawTarget(targetFor(p,e.count),false);

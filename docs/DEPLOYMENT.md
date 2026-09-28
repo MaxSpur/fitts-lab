@@ -294,3 +294,5 @@ The session list updates status when a session ends; Ended/Expired sessions rema
 The production build versions application asset paths by content hash. Publish the complete `dist/` output so HTML, scripts, and styles use the same release even when browsers cache older files.
 
 For repeat runs (1.1.1), redeploy `classroom-api` before the frontend so ingress preserves optional `run_id` and `run_number`. They are stored in the existing trial JSON; no database migration is needed. Older clients and queued records without those fields remain accepted. The legacy room phase field can remain in the database; current clients ignore it.
+
+The 1.2.0 shorter randomized protocol and chart legend changes require only the frontend deployment. Existing trial variants and JSON fields are unchanged; no further SQL or Edge Function update is required after 1.1.1. Earlier trials remain available and fits stay separated by application version.

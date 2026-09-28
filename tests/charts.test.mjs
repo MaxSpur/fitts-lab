@@ -23,3 +23,11 @@ test('all three axes plot their actual measurement field with data-derived bound
   await view.runAsync();view.finalize();
  }
 });
+
+for(const name of ['scatterSpec','heroSpec'])test(`${name} keeps point glyphs separate from trendline dashes`,()=>{
+ const compiled=vegaLite.compile(specs[name]()).spec;
+ const stage=compiled.legends.find(l=>l.title==='Stage'),trend=compiled.legends.find(l=>l.title==='Trendline');
+ assert.ok(stage.shape);assert.equal(stage.strokeDash,undefined);
+ assert.equal(trend.symbolType,'stroke');assert.ok(trend.strokeDash);
+ assert.equal(compiled.legends.filter(l=>l.shape).length,1);
+});

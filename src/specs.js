@@ -4,17 +4,17 @@ export const theme={background:'transparent',font:'Arial',view:{stroke:null},axi
 const base=(height=230)=>({$schema:SCHEMA,width:'container',height,autosize:{type:'fit',contains:'padding'},config:theme});
 const tooltip=[{field:'participant_label',title:'Participant'},{field:'run_number',title:'Run'},{field:'distance',title:'Distance (CSS px)',format:'.1f'},{field:'target_w',title:'Target width (CSS px)',format:'.1f'},{field:'target_h',title:'Target height (CSS px)',format:'.1f'},{field:'approach_width',title:'Size along approach (CSS px)',format:'.1f'},{field:'index_difficulty',title:'Difficulty (bits)',format:'.2f'},{field:'acquisition_ms',title:'Acquisition (ms)',format:'.0f'},{field:'hit',title:'Hit'},{field:'variant',title:'Condition'}];
 const stageShape={field:'task',type:'nominal',title:'Stage',scale:{domain:['horizontal','circles','interfaces'],range:['square','circle','diamond']},legend:{labelExpr:"{'horizontal':'Horizontal','circles':'Circles','interfaces':'Interfaces'}[datum.label]"}};
-const stageDash={field:'task',type:'nominal',title:'Stage',scale:{domain:['horizontal','circles','interfaces'],range:[[1,0],[6,3],[2,3]]},legend:stageShape.legend};
+const stageDash={field:'task',type:'nominal',title:'Stage',scale:{domain:['horizontal','circles','interfaces'],range:[[1,0],[6,3],[2,3]]},legend:{labelExpr:stageShape.legend.labelExpr,title:'Trendline',symbolType:'stroke'}};
 export function scatterSpec({height=300,extent=2000,x='index_difficulty',xMax=7}={}){return heroSpec({height,extent,x,xMax,classroom:false});}
 export function heroSpec({height=320,extent=2000,x:field='index_difficulty',xMax=7,classroom=true}={}){
   const x={field,type:'quantitative',title:null,scale:{domain:[0,xMax]},axis:{tickCount:6,format:field==='index_difficulty'?'.1f':'.0f'}};
   const y={field:'acquisition_ms',type:'quantitative',title:'Acquisition time (ms)',scale:{domain:[0,extent]}};
   const color=classroom?{field:'student_color',type:'nominal',scale:null,legend:null}:{value:'#387d87'};
-  return {...base(height),params:[{name:'focusStudent',value:''}],layer:[
+  return {...base(height),resolve:{legend:{shape:'independent',strokeDash:'independent'}},params:[{name:'focusStudent',value:''}],layer:[
     {params:[{name:'selectedPerson',select:{type:'point',fields:['dataset_id'],on:'click',clear:'dblclick'}}],data:{name:'trials'},
       mark:{type:'point',size:44,strokeWidth:1.3},encoding:{x,y,shape:stageShape,fill:classroom?{condition:{test:'datum.hit',...color},value:'transparent'}:{condition:{test:'datum.hit',value:'#387d87'},value:'transparent'},stroke:color,
       opacity:{condition:{test:"!focusStudent || datum.dataset_id === focusStudent",value:.55},value:.06},tooltip}},
-    {data:{name:'means'},mark:{type:'point',filled:true,size:100,stroke:'white',strokeWidth:1},encoding:{x,y,shape:stageShape,color,opacity:{condition:{test:"!focusStudent || datum.dataset_id === focusStudent",value:.9},value:.08},tooltip:[...tooltip,{field:'n',title:'Successful first attempts'}]}},
+    {data:{name:'means'},mark:{type:'point',filled:true,size:100,stroke:'white',strokeWidth:1},encoding:{x,y,shape:{...stageShape,legend:null},color,opacity:{condition:{test:"!focusStudent || datum.dataset_id === focusStudent",value:.9},value:.08},tooltip:[...tooltip,{field:'n',title:'Successful first attempts'}]}},
     {data:{name:'fit'},mark:{type:'line',strokeWidth:2,color:'#283936',clip:true},encoding:{x,y,strokeDash:stageDash,detail:{field:'series'},tooltip:[{field:'task',title:'Stage'},{field:'label',title:'Settings'},{field:'n',title:'Successful attempts'},{field:'r2',title:'R²',format:'.2f'}]}}
   ]};
 }
