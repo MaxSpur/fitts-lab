@@ -34,7 +34,7 @@ These checks do not provide global denial-of-service protection: an attacker can
 
 ## What is collected
 
-Shared records include random participant labels, self-reported device category, experiment geometry, timing, outcomes, gain/jitter settings, arena width, device-pixel ratio, and sampled pointer trajectories inside the task. No student name, email, full screen image, IP address field, or general keystroke record is stored by the application. Hosting/backend services may retain connection metadata and IP addresses in their own logs.
+Shared records include random participant labels, device category (`unspecified` for new sets; older self-reports are retained), experiment geometry, timing, outcomes, gain/jitter settings, arena width, device-pixel ratio, and sampled pointer trajectories inside the task. No student name, email, full screen image, IP address field, or general keystroke record is stored by the application. Hosting/backend services may retain connection metadata and IP addresses in their own logs.
 
 Random identifiers do not by themselves guarantee anonymization. Explain the collection and retention to students under your institution's rules. The sharing checkbox is an application-level notice/choice, not a claim that every legal requirement has been met. Students can continue privately and export locally. Previously completed standalone measurements are not uploaded retroactively when they join.
 

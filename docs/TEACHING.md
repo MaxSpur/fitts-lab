@@ -4,7 +4,7 @@ The exercise is an aside in the introduction to HCI. Keep the measurement mechan
 
 ## Before students arrive
 
-Open a new session on `classroom.html`, check a real participant connection, and have the permanent participant URL ready in the slides/chat. Present the instructor window. Guided horizontal and circular sets default to the system cursor. The matched boundary sets use a captured cursor in Automatic mode; try them on the classroom machines before comparing times. Ask students to use one device throughout. They can select mouse or trackpad; choosing a category is optional and descriptive.
+Open a new session on `classroom.html`, check a real participant connection, and have the permanent participant URL ready in the slides/chat. Present the instructor window. Guided horizontal and circular sets default to the system cursor. The matched boundary sets use a captured cursor in Automatic mode; try them on the classroom machines before comparing times. Ask students to use one device throughout. Device selection is omitted. Use a mouse or trackpad; touch and pen trajectories are not supported.
 
 The guided protocol contains 32 selections in each stage (96 total): four sets of eight in Horizontal, Circles, and Interfaces. Horizontal and Circles each use four sizes with four travel distances occurring twice per size. Interfaces mixes ordinary buttons with controls in two matched free/edge pairs. Equal selection counts do not guarantee equal duration. These short runs are teaching samples; use class aggregates or repeat runs for more observations, and allow practice before comparing timings.
 
@@ -13,7 +13,7 @@ The guided protocol contains 32 selections in each stage (96 total): four sets o
 | Time | Action | Prompt |
 |---|---|---|
 | 0:00–1:00 | Join through the common participant page. Start a set. | “Your label is on the projection. Every measured attempt adds to our dataset.” |
-| 1:00–3:00 | Short horizontal sets. Show tiles pulsing. | “What changed when the strip became narrow? Can a farther target still be easy?” |
+| 1:00–3:00 | Short horizontal sets. Show incoming results in the activity list. | “What changed when the strip became narrow? Can a farther target still be easy?” |
 | 3:00–4:30 | Sample circular sets at different distances and sizes. | “The direction changes. A circle still offers the same diameter along a center-directed approach.” |
 | 4:30–7:30 | Follow the varied-button sequence; then try the free menu before its edge-limited match. | “Which button sizes feel easier to acquire, and why?” |
 | 7:30–10:30 | Ask students to finish/review. Freeze the projection. Compare distance → size → difficulty. | “These are the same clicks. We changed the horizontal variable by including target size.” |
@@ -37,10 +37,10 @@ The complete explainer, mathematical qualification, data exports, and optional c
 
 ## Instructor display tips
 
-The participant mosaic has stable positions. A tile pulses when new attempts arrive, and clicking it reveals the latest recorded path. The main chart distinguishes raw first attempts from participant–condition means. Switch between distance, size, and difficulty after collecting several different conditions. In presentation mode, distracting setup elements are hidden.
+The Class activity sidebar shows runs with successful selections in each stage, each run’s selection counts, and its latest received attempt. Rows remain in arrival order and pulse when data arrives. Select a run for its median successful first-attempt time, miss rate, and latest path; Show all clears the highlight. Joined students without results appear below. Counts describe received data, not online presence or completed guided runs. Sidebar counts include all stages and pointer conditions even when the main plot is filtered. The main chart distinguishes raw first attempts from participant–condition means. Switch between distance, size, and difficulty after collecting several different conditions. In presentation mode, distracting setup elements are hidden.
 
 Freeze stops visual updates while acquisition and synchronization continue. Resume incorporates the newly received records. The first-attempt error indicator is a reminder to interpret speed together with accuracy. The paired boundary chart compares each participant within the matched settings; because the free run always comes first, practice can also influence the difference.
 
 If connectivity fails, let students finish locally and export JSON. The instructor can later import an export as an explicitly disconnected snapshot. Do not present a simulated preview as the class's data; its banner and exports identify it as synthetic.
 
-Students who finish all stages can choose **Start another run**. The classroom shows another run tile under the same student label and color. Use the participant Run selector to review earlier work; repeats never erase it.
+Students who finish all stages can choose **Start another run**. The classroom shows another run row under the same student label and color. Use the participant Run selector to review earlier work; repeats never erase it.

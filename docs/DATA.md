@@ -29,7 +29,7 @@ CSV is the compact analysis table. JSON contains the same records, sampled paths
 | `start_x/y`, `target_x/y`, `click_x/y` | Arena-relative CSS-pixel coordinates, y downward. |
 | `path` | JSON array `{x,y,t}`; CSS coordinates, elapsed milliseconds from activation. Up to 120 local samples and 40 uploaded samples. Not included in CSV. |
 | `perturbation`, `jitter_css_px`, `gain`, `seed` | Normal/jitter setting, amplitude parameter, scalar gain, reproducibility seed. |
-| `input_mode`, `device` | Virtual/native implementation; self-reported coarse device category. |
+| `input_mode`, `device` | Virtual/native implementation; new sets use `device=unspecified`. Earlier self-reported categories remain in saved data. |
 | `viewport_width`, `dpr` | Displayed arena width in CSS pixels; device-pixel ratio. |
 | `created_at` | Client UTC timestamp for chronology, not the duration clock. |
 | `seq` | Server-assigned sequence included in instructor records for reconciliation. Not a timing measurement. |

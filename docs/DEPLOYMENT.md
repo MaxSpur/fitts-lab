@@ -215,7 +215,7 @@ On the deployed instructor page, choose **Connect classroom**, sign in, and open
 
 Open the participant URL on a **second computer or a different browser profile**. Choose **Join live classroom**, review the sharing notice, confirm, then start a set. Verify all of the following:
 
-1. A participant tile appears and its label matches the student page.
+1. The student appears as awaiting a first result; after a trial, a run row appears with the same label.
 2. Completed attempts appear during the set, and misses are retained.
 3. On completion, the student sees the review state and their local charts remain visible.
 4. The instructor's Freeze button stops display updates while collection continues; Resume reveals the accumulated data.
@@ -267,12 +267,12 @@ There is a 24-hour room lifetime, configured room capacity, 4,000-attempt partic
 | SQL reports `relation "public.instructors" does not exist` | Step 4 has not completed in the selected project. Apply the **entire** migration file before running the step 5 allowlist statement. |
 | Instructor login succeeds but access fails | Confirm the correct Auth UUID is in `public.instructors`; check that the selected room belongs to that account. |
 | Database operation failed | Confirm the whole migration was applied once to this project; inspect Edge Function and Postgres logs. Do not loosen RLS as a workaround. |
-| Participant tile appears but no measurements | Look at the participant queue status and function logs; verify validation errors, room expiry, and its credential. |
+| Student joined but no measurements | Look at the participant queue status and function logs; verify validation errors, room expiry, and its credential. |
 | Data arrives only every five seconds | The snapshot fallback is working. Check private-channel RLS, teacher JWT, Realtime configuration, and classroom firewall. |
 | Older data missing after refresh | Confirm same browser profile/origin, private browsing/storage policies, and a fully drained upload queue; instructor snapshots use the stored database. |
 | Local rehearsal does not cross tabs | Both pages must have exactly the same origin and browser profile; use the provided `?local=1` link. |
 | Pointer Lock fails | Use a foreground desktop tab and a direct Start click. Release Escape and click again. The system cursor works for ordinary targets; simulated hard boundaries require Pointer Lock. |
-| Pointer moves differently on machines | OS acceleration, device gain, browser scaling, and hardware vary. Keep comparisons within a participant; label device groups descriptively. |
+| Pointer moves differently on machines | OS acceleration, device gain, browser scaling, and hardware vary. Keep comparisons within a participant; use the same input setup through a run. |
 | An ended room will not accept a queued batch | After the ten-minute grace/24-hour expiry, the queue is retained locally. Export it; it is not silently moved into a new room. |
 
 ## References checked for setup

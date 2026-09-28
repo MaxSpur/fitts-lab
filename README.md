@@ -3,7 +3,7 @@
 Two static websites for a classroom introduction to human–computer interaction.
 
 - **`index.html` — participant.** Three stages, each with four sets of eight timed selections. Horizontal and Circles use four target sizes and balanced, randomized distances; Interfaces alternates ordinary buttons with menu/window controls in matched free/edge sets. Each guided set has one unscored start, then continues from target to target. Horizontal and Circles use the system cursor by default; the matched free/edge sets use a captured cursor. Live movement traces, descriptive trendlines, browser history, and CSV/JSON exports are included.
-- **`classroom.html` — instructor.** A live participant mosaic, incoming-data pulses, Distance, Size, and Difficulty views, linked participant inspection, paired boundary comparisons, freeze/presentation modes, exports and snapshot imports.
+- **`classroom.html` — instructor.** A live activity list with stage coverage and per-run inspection, incoming-data pulses, Distance, Size, and Difficulty views, linked participant inspection, paired boundary comparisons, freeze/presentation modes, exports and snapshot imports.
 
 Both are complete static applications. The participant page works without a backend. Multi-computer classroom sharing requires the included Supabase schema and Edge Function to be deployed and configured; a hosted project is **not** included or pre-provisioned.
 
@@ -74,10 +74,10 @@ Vega 6.2.0 and Vega-Lite 6.4.2 are bundled locally. See `vendor/THIRD_PARTY_NOTI
 
 Original application code is MIT-licensed; see LICENSE. Third-party components retain their own licenses.
 
-The classroom view provides compact task and device filters, participant paths, and descriptive trendlines. Freeze pauses the display while data collection continues.
+The classroom view provides compact stage and pointer-condition filters, participant paths, and descriptive trendlines. Freeze pauses the display while data collection continues.
 
 In the classroom’s **Session & participant link** controls, **Reset data…** clears classroom measurements after confirmation while keeping participants joined. Export any results you need first. Student-local copies remain, and queued uploads may arrive afterward.
 
-Results combine all stages using square/circle/diamond glyphs. The classroom assigns a color to each student; click a tile or point to highlight them. Session status distinguishes Open, Ended, and Expired; ended sessions retain results and briefly accept queued uploads. **Sync now** reconciles saved measurements immediately.
+Results combine all stages using square/circle/diamond glyphs. The classroom assigns a color to each student; click a run or point to highlight them. Session status distinguishes Open, Ended, and Expired; ended sessions retain results and briefly accept queued uploads. **Sync now** reconciles saved measurements immediately.
 
-After all three stages, **Start another run** begins a fresh dataset. Earlier results remain available in the Run selector and exports. In a classroom, repeats stay under the same student and appear as separate run tiles; no rejoining is needed. The instructor does not control student stages. Distance, Size, and Difficulty views are available on both pages.
+After all three stages, **Start another run** begins a fresh dataset. Earlier results remain available in the Run selector and exports. In a classroom, repeats stay under the same student and appear as separate run rows; no rejoining is needed. The instructor does not control student stages. Distance, Size, and Difficulty views are available on both pages.

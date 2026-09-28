@@ -19,7 +19,7 @@ export function simulationRows(nPeople=24,seed=28){
         practice:false,perturbation:'normal',gain:1,hit,distance:d,nominal_distance:d,target_w:t.w,target_h:t.h,
         approach_width:w,index_difficulty:id,acquisition_ms:mt,completion_ms:hit?mt:null,
         start_x:h.x,start_y:h.y,target_x:t.x,target_y:t.y,click_x:clickX,click_y:clickY,
-        input_mode:task==='interfaces'&&!BUTTON_SETS.includes(p.variant)?'virtual':'native',device:i%3?'mouse':'trackpad',
+        input_mode:task==='interfaces'&&!BUTTON_SETS.includes(p.variant)?'virtual':'native',device:'unspecified',
         viewport_width:960,dpr:1,created_at:new Date().toISOString(),
         path:Array.from({length:24},(_,k)=>{const u=k/23;return{x:h.x+(clickX-h.x)*u,y:h.y+(clickY-h.y)*u,t:mt*u};})});
     }

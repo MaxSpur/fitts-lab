@@ -79,7 +79,7 @@ The smoke test does not verify WebSocket delivery, browser CORS enforcement, log
 
 Rehearse with several real devices on the classroom network. Inspect Edge Function error/latency logs, Realtime limits, and database response time. A burst of 40 real clients is not the same as simulated preview on one browser. The preview never exercises the network. Do not infer auditorium capacity from smooth local animation.
 
-Test projection resolution, Freeze/Resume, full-screen fallback, slow trials outside the initial axis range, and device/condition filters. Verify that synthetic preview/import banners remain visible. Export JSON and confirm it contains real records only when the source is the real room.
+Test projection resolution, Freeze/Resume, full-screen fallback, slow trials outside the initial axis range, and stage/condition filters. Verify that synthetic preview/import banners remain visible. Export JSON and confirm it contains real records only when the source is the real room.
 
 ## Optional browser automation
 

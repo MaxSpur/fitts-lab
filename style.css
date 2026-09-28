@@ -102,3 +102,15 @@ body.dashboard{--ink:#242b2b;--muted:#596563;--blue:#ae432e;--blue-dark:#8d3524;
 @media(max-width:720px){.dashboard .wrap{padding:0 12px}.dashboard .hero,.dashboard-grid,.dashboard-bottom{grid-template-columns:1fr}.dashboard .source-actions{justify-content:flex-start}.dashboard .stats-strip{gap:10px 16px}.dashboard .status-right{margin-left:0}.dashboard .mosaic{grid-template-columns:repeat(4,minmax(0,1fr));max-height:170px}.dashboard .source-banner{align-items:flex-start;flex-direction:column;gap:4px}.dashboard .chart-toolbar{align-items:flex-start}.dashboard .join-address a{overflow-wrap:anywhere}}
 .session-state{font-size:12px;padding:8px 0;border-bottom:1px solid var(--line);font-weight:600}.session-state:empty{display:none}.dashboard .fit-caption{max-height:110px;overflow:auto}.progress-track{flex-wrap:wrap}.segment{max-width:16px}
 .run-controls label{flex:0 1 240px}.run-controls #run-status{padding-bottom:8px}
+/* Activity answers coverage and inspection questions without ranking students. */
+.dashboard-grid{grid-template-columns:minmax(0,1fr) 290px}
+.stage-coverage{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-block:1px solid var(--line);padding:9px 0;margin:10px 0}
+.stage-coverage strong,.stage-coverage span{display:block;font-size:12px}.stage-coverage strong{font:17px ui-monospace,monospace}.stage-coverage span{color:var(--muted);font-size:10px;margin-top:4px}
+.activity-heading{display:flex;justify-content:space-between;font-size:12px;margin-top:12px}
+.activity-list{display:flex;flex-direction:column;gap:4px;max-height:360px;overflow:auto}
+.activity-run{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 6px;text-align:left;padding:8px;border:1px solid var(--line);border-left:3px solid var(--student-color);border-radius:0;background:#faf9f6;font-size:11px;font-weight:400;flex-shrink:0}
+.activity-run .run-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.run-counts{font:11px ui-monospace,monospace;white-space:pre}.run-latest{grid-column:1/-1;color:var(--muted);font-size:10px}.activity-run.selected{background:var(--soft);outline:1px solid var(--student-color);outline-offset:-1px}.activity-run.flash{animation:arrive .7s ease-out}
+.run-detail{padding:8px 0;border-bottom:1px solid var(--line);font-size:12px}.run-detail p{margin:4px 0}.run-detail span{font-size:10px;color:var(--muted)}
+#waiting-students{margin:8px 0 0;font-size:11px}#waiting-students:empty{display:none}
+@media(max-width:1000px){.dashboard-grid{grid-template-columns:minmax(0,1fr) 260px}}
+@media(max-width:720px){.dashboard-grid{grid-template-columns:1fr}.activity-list{max-height:260px}}

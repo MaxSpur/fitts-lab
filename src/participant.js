@@ -31,7 +31,7 @@ function options(plan){
   const inputMode=['menu-edge','corner-edge'].includes(plan.variant)?'virtual':choice==='auto'?(paired?'virtual':'native'):choice;
   return{runId:currentRun.id,runNumber:currentRun.number,participantId:membership?.credential.participant_id||person,participantLabel:membership?.credential.participant_label||localLabel,roomId:membership?.room.id||null,
   perturbation:$('#jitter').checked?'jitter':'normal',jitter:3,gain:Number($('#gain').value),inputMode,
-  device:$('#device').value,seed:hash(person+sets.length),dpr:devicePixelRatio||1};}
+  device:'unspecified',seed:hash(person+sets.length),dpr:devicePixelRatio||1};}
 function selectedPlan(){
   const list=protocol(task,person+currentRun.id),i=Math.min(progress[task]||0,list.length-1),p={...list[i]};
   p.protocolVersion=VERSION;p.guidedIndex=i;
@@ -122,7 +122,7 @@ $('#start-button').onclick=start;$('#pause-button').onclick=()=>arena.pause('Pau
 $$('.task-tab').forEach(b=>b.onclick=()=>switchTask(b.dataset.task));
 // Roving-keyboard behavior for the three tabs.
 $$('.task-tab').forEach((b,i)=>b.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const n=e.key==='Home'?0:e.key==='End'?2:(i+(e.key==='ArrowRight'?1:2))%3;switchTask(TASKS[n]);$$('.task-tab')[n].focus();}}));
-for(const q of ['#device','#jitter','#gain'])$(q).onchange=()=>{save(q.slice(1),$(q).type==='checkbox'?$(q).checked:$(q).value);prepare();};
+for(const q of ['#jitter','#gain'])$(q).onchange=()=>{save(q.slice(1),$(q).type==='checkbox'?$(q).checked:$(q).value);prepare();};
 $('#input-mode').onchange=()=>{const hadProgress=arena.engine?.count>0||arena.active();save('cursor-mode-v2',$('#input-mode').value);prepare();if(hadProgress)toast('Cursor mode changed. A new set is ready; earlier attempts remain in history.');};
 $('#run-mode').onchange=()=>{$('#explore-controls').hidden=$('#run-mode').value!=='explore';
   $('#input-mode').value=$('#run-mode').value==='guided'?'auto':saved('cursor-mode-v2','auto');prepare();};
@@ -196,7 +196,7 @@ $('#join-class').onclick=async()=>{
 $('#share-consent').onchange=()=>$('#confirm-join').disabled=!$('#share-consent').checked;
 $('#confirm-join').onclick=async()=>{
   if(!$('#share-consent').checked||!joinCandidate)return;$('#confirm-join').disabled=true;
-  try{arena.pause('Joined classroom');const credential=await joinRoom(joinCandidate.room,$('#device').value,joinCandidate.source);membership={credential,room:joinCandidate.room};$('#join-dialog').close();updateMembership();prepare();}catch(e){toast(e.message,true);$('#confirm-join').disabled=false;}
+  try{arena.pause('Joined classroom');const credential=await joinRoom(joinCandidate.room,'unspecified',joinCandidate.source);membership={credential,room:joinCandidate.room};$('#join-dialog').close();updateMembership();prepare();}catch(e){toast(e.message,true);$('#confirm-join').disabled=false;}
 };
 $('#leave-class').onclick=()=>{arena.pause('Stopped sharing');membership=null;save('active-membership',null);updateMembership();prepare();toast('Future attempts stay private. Already queued attempts will finish uploading.');};
 function updateMembership(){
@@ -215,7 +215,7 @@ setInterval(async()=>{
     }else membership.room=room;
   }catch{/* The durable outbox handles interruptions; do not discard membership on a transient failure. */}
 },CONFIG.participantPollMs);
-for(const q of ['device','jitter','gain']){const v=saved(q,null);if(v!==null){if(q==='jitter')$('#'+q).checked=v;else $('#'+q).value=v;}}
+for(const q of ['jitter','gain']){const v=saved(q,null);if(v!==null){if(q==='jitter')$('#'+q).checked=v;else $('#'+q).value=v;}}
 $('#input-mode').value='auto';
 const prior=saved('active-membership',null);if(prior&&(prior.credential.source==='local'?localRoom()?.id===prior.room.id:configured()))membership=prior;
 updateMembership();updateRunControls();prepare();renderResults();historyOptions();

@@ -93,7 +93,7 @@ The time-versus-difficulty plots for Horizontal, Circles, and free interface tar
 
 Input mode, device, gain, perturbation, jitter amplitude, task, and application version define separate fit groups. Classroom lines pool successful first attempts within each group, so participants contributing more trials have more weight. Larger student–run–condition mean markers still require at least three successful observations. These lines are descriptive; they do not estimate a causal effect or account for repeated measurements with a mixed-effects model.
 
-Horizontal and Circular each have sixteen planned distance–width combinations, with two observations per combination before misses. The combined view uses square, circle, and diamond glyphs for Horizontal, Circles, and Interfaces. Classroom color identifies the participant and matches the participant tiles; selecting one dims others. Hollow glyphs indicate misses. Fits remain separate by stage and input settings (solid Horizontal, dashed Circles, dotted Interfaces). Free interface selections appear in the combined view. Hard-edge sets remain in the adjacent paired chart because hard edges have no scalar index of difficulty. The Stage legend shows point glyphs; the separate Trendline legend shows the line styles.
+Horizontal and Circular each have sixteen planned distance–width combinations, with two observations per combination before misses. The combined view uses square, circle, and diamond glyphs for Horizontal, Circles, and Interfaces. Classroom color identifies the participant and matches the student-run rows; selecting one dims others. Hollow glyphs indicate misses. Fits remain separate by stage and input settings (solid Horizontal, dashed Circles, dotted Interfaces). Free interface selections appear in the combined view. Hard-edge sets remain in the adjacent paired chart because hard edges have no scalar index of difficulty. The Stage legend shows point glyphs; the separate Trendline legend shows the line styles.
 
 A fixed nominal distance gets no distance-axis trend from off-center click variation alone. Trajectory, speed, and landing plots retain their measured traces and target references.
 
@@ -103,7 +103,7 @@ The boundary chart connects each student run within a matched pair, protocol ver
 
 ## Interpretation across people
 
-Different people, devices, scaling settings, posture, practice, and strategies produce different intercepts and slopes. Self-selected mouse/trackpad groups are descriptive. CSS pixels and an invariant D/W ratio do not equalize physical motor demands. Browser animation/event load can also affect responsiveness. A short live class can illustrate a relationship, its variability, and the edge effect without claiming to establish a hardware ranking or precise universal constants.
+Different people, devices, scaling settings, posture, practice, and strategies produce different intercepts and slopes. Device selection has been removed. New sets use the existing `unspecified` category; earlier self-reports remain descriptive and keep their separate fit groups. Touch and pen trajectories are not supported. CSS pixels and an invariant D/W ratio do not equalize physical motor demands. Browser animation/event load can also affect responsiveness. A short live class can illustrate a relationship, its variability, and the edge effect without claiming to establish a hardware ranking or precise universal constants.
 
 ## Primary and implementation references
 
@@ -116,6 +116,6 @@ Different people, devices, scaling settings, posture, practice, and strategies p
 
 ## Repeating the exercise
 
-Completing each guided set in all three stages enables **Start another run**. Progress starts over with a new run ID and layout seed; existing trials, exports, pending uploads, and classroom membership remain intact. Classroom colors still identify students, while tiles and selection distinguish runs. The participant Run selector can display a single run or all saved runs.
+Completing each guided set in all three stages enables **Start another run**. Progress starts over with a new run ID and layout seed; existing trials, exports, pending uploads, and classroom membership remain intact. Classroom colors still identify students, while activity rows and selection distinguish runs. The participant Run selector can display a single run or all saved runs.
 
 Condition means and boundary pairs are computed within a run. Classroom regressions still pool observations within protocol/input groups: students who repeat contribute more observations. Repeats are not additional independent students. Records made before run IDs were added appear as Earlier results.

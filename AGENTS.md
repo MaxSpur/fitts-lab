@@ -29,3 +29,5 @@ Production builds put the application module graph and stylesheet under a conten
 Students choose their own stage; the legacy backend `phase` field is ignored. Plot axes share `plotAxis()` labels and bounds. Size uses approach width, with means grouped by protocol and input settings.
 
 `src/runs.js` owns repeat-run identity and completion. Trials optionally carry `run_id`/`run_number`; older records form an Earlier results dataset. Namespace datasets by participant and run, preserve membership/outbox/history on repeat, and keep condition means and boundary pair keys separated by run. Changing accepted run fields requires an Edge Function redeploy, not a SQL migration.
+
+`src/activity.js` summarizes received selections per run for the classroom sidebar. Count each successful movement once (including retries), exclude practice, preserve arrival order, and never infer online presence or guided completion from these counts. Freeze includes activity and membership snapshots. Device controls are removed; new sets and joins use `unspecified`, while older device values remain compatible.
