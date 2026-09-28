@@ -160,44 +160,59 @@ unsteady pointer, not a clinical impairment model. Gain is a scalar on
 relative input, not a replacement OS acceleration curve. The first
 relative movement event after lock is ignored only if it is an
 implausibly large cursor-warp delta.</p>
-<h2 id="equations-and-the-boundary-limit">Equations and the boundary
-limit</h2>
+<h2 id="equations-bits-and-window-edges">Equations, bits, and window
+edges</h2>
 <p>The Method editor is an unrecorded 2D rectangle. Dragging moves it
 horizontally and vertically; four edge handles and a corner handle
 resize it. Dimensions appear inside the rectangle. Difficulty uses the
-same center-directed chord as the experiment. Arrow keys adjust the
-focused target or handle by 2 illustration units (Shift: 20); Escape
-cancels an active drag. The extension option fixes the near intersection
-on the approach line and lets the far intersection tend to infinity. It
-preserves the finite rectangle for restoration. All three formulations
-and their live values remain visible.</p>
-<p>The logarithm can be motivated by a halving analogy: reducing a
-region from L to W in k binary steps gives L/2^k = W, hence k =
-log2(L/W). This is an intuition, not a derived motor mechanism. The
-index and its approximately linear relationship with observed time are
-model choices evaluated against data.</p>
+same center-directed chord as the experiment, labeled W in the
+illustration. Arrow keys adjust the focused target or handle by 2
+illustration units (Shift: 20); Escape cancels an active drag. All three
+formulations and their live values remain visible.</p>
+<p>Top and right controls on the diagram toggle simulated window edges
+at the corresponding target bounds. A preview dot follows the pointer,
+with y constrained to the top boundary and/or x constrained to the right
+boundary. Both together demonstrate a corner. The edges move with the
+target. These controls do not capture the system cursor or record
+trials. The finite distance, approach width, and indices remain
+unchanged and are explicitly labeled as free-target geometry. They do
+not predict the effect of pointer constraints.</p>
+<p>A bit is a unit of information: N equally likely alternatives
+correspond to log2(N) bits. Two, four, and eight alternatives require
+one, two, and three binary choices. A spatial analogy is repeated
+halving: reducing an interval from L to W in k steps gives L/2^k = W,
+hence k = log2(L/W). This motivates a logarithmic measure of spatial
+precision; it is not a derived motor mechanism or a count of actual
+corrections. Fitts used an information-channel analogy to relate
+movement distance and tolerated error. The index and its approximately
+linear relationship with observed time are model choices evaluated
+against data. Fractional bit values are valid.</p>
 <p>Ordinary-target charts use Shannon difficulty:</p>
 <pre class="text"><code>ID = log2(1 + D/W)
 T = a + b*ID</code></pre>
-<p>The coefficients are fitted descriptions of these observations. Their
-numerical values are not human constants. For an interval extending from
-d_near to d_far:</p>
-<pre class="text"><code>D = (d_near + d_far)/2
-W = d_far - d_near
-Original Fitts: log2(2D/W) = log2((d_far+d_near)/(d_far-d_near))
-Welford:       log2(D/W+1/2) = log2(d_far/(d_far-d_near))</code></pre>
-<p>Holding the near edge fixed while the far edge tends to infinity
-gives zero for the original and Welford difficulty terms. Under that
-same interval construction, Shannon difficulty tends to log2(1.5). These
-are distinct formulations; the page displays both limits. A zero index
-term does not mean zero movement time or physical effort.</p>
-<p>This limit illustrates the disappearance of the far-end
-stopping-precision constraint. It is not a complete travel-time law for
-an unbounded target. A real pointer still travels, a menu needs
-precision along the edge, and a corner changes the control geometry.
-Hard-edge/corner records therefore have
-<code>index_difficulty=null</code> and are excluded from the ordinary
-Fitts plot.</p>
+<p>D/W is dimensionless. Doubling distance and width together leaves ID
+unchanged. The +1 makes ID nonnegative for D &gt;= 0 and zero at D = 0.
+Increasing ID by one bit doubles 1 + D/W and increases fitted time by b.
+The quantity 1 + D/W is not a literal count of visible targets. With D =
+280 and W = 40, ID = log2(8) = 3 bits. If a = 100 ms and b = 100 ms/bit,
+predicted time is 400 ms. The coefficients are fitted descriptions, not
+human constants.</p>
+<p>The comparison also shows Fitts' log2(2D/W) and Welford's log2(D/W +
+1/2). Each formulation needs separately fitted coefficients. A zero
+index term does not mean zero movement time or physical effort: T still
+equals a.</p>
+<p>A window edge prevents overshoot in one direction; precision along
+the edge and travel to it remain. A corner constrains both axes.
+Modeling these conditions by substituting infinite width or zero
+difficulty omits this change in control geometry. Hard-edge/corner
+records therefore have <code>index_difficulty=null</code> and are
+excluded from the ordinary Fitts plot. Matched free/edge sets are
+compared separately.</p>
+<p>Sources: <a
+href="https://doi.org/10.1002/j.1538-7305.1948.tb00917.x">Shannon
+(1948)</a>, <a href="https://doi.org/10.1037/h0055392">Fitts (1954)</a>,
+and <a href="https://www.yorku.ca/mack/ojas2013.html">MacKenzie
+(2013)</a>.</p>
 <h2 id="charts-and-summaries">Charts and summaries</h2>
 <p>Miniatures show paths (the latest 12 attempts), speed (the latest
 six), and every click endpoint in the selected set. Path coordinates are

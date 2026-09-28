@@ -74,8 +74,12 @@ with sync_playwright() as p:
  assert page.locator('#code-dialog').is_visible()
  assert 'vega-lite/v6' in page.locator('#code-text').inner_text()
  page.locator('#code-dialog [data-close-dialog]').click()
- page.locator('#geometry-unbounded').check()
- assert '0.585' in page.locator('#geometry-id').inner_text()
+ geometry_id=page.locator('#geometry-id').inner_text()
+ page.locator('#geometry-top-edge').click()
+ page.locator('#geometry-right-edge').click()
+ assert page.locator('#geometry-top-edge').get_attribute('aria-pressed')=='true'
+ assert page.locator('#geometry-right-edge').get_attribute('aria-pressed')=='true'
+ assert page.locator('#geometry-id').inner_text()==geometry_id
  page.locator('#input-mode').select_option('virtual')
  page.locator('#start-button').click()
  page.wait_for_timeout(400)

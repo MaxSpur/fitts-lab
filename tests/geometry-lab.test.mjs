@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ORIGIN,INITIAL_GEOMETRY,geometryValues,changeGeometry} from '../src/geometry-lab.js';
+import {ORIGIN,INITIAL_GEOMETRY,geometryValues,changeGeometry,boundedPointer} from '../src/geometry-lab.js';
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
 test('2D geometry uses the approach chord and all three difficulty formulations',()=>{
  const s={x:300,y:ORIGIN.y-40,width:160,height:80},v=geometryValues(s);
@@ -15,10 +15,22 @@ test('2D dragging preserves dimensions; edge resizing anchors the opposite edge'
  const top=changeGeometry(INITIAL_GEOMETRY,'top',20,30);assert.equal(top.y+top.height,220);assert.equal(top.height,60);
  const corner=changeGeometry(INITIAL_GEOMETRY,'corner',30,40);assert.equal(corner.width,170);assert.equal(corner.height,130);
  for(const part of ['target','left','right','top','bottom','corner'])for(const delta of [-10000,10000]){
-   const s=changeGeometry(INITIAL_GEOMETRY,part,delta,delta);assert.ok(s.x>=90&&s.y>=24);assert.ok(s.x+s.width<=570&&s.y+s.height<=282);assert.ok(s.width>=84&&s.height>=44);assert.ok(geometryValues(s).near>0);
+   const s=changeGeometry(INITIAL_GEOMETRY,part,delta,delta);assert.ok(s.x>=90&&s.y>=48);assert.ok(s.x+s.width<=570&&s.y+s.height<=282);assert.ok(s.width>=84&&s.height>=44);assert.ok(geometryValues(s).near>0);
  }
 });
-test('extension uses limits along the approach and retains the finite rectangle',()=>{
- const state={...INITIAL_GEOMETRY,unbounded:true},v=geometryValues(state);assert.equal(v.distance,Infinity);assert.equal(v.width,Infinity);assert.equal(v.ratio,.5);assert.equal(v.shannon,Math.log2(1.5));assert.equal(v.fitts,0);assert.equal(v.welford,0);
- assert.deepEqual(changeGeometry(state,'target',100,100),state);assert.equal(v.near,geometryValues(INITIAL_GEOMETRY).near);
+test('window edges constrain only their own axis, leaving finite geometry unchanged',()=>{
+ const s=INITIAL_GEOMETRY,p={x:590,y:20};
+ assert.deepEqual(boundedPointer(s,p),p);
+ assert.deepEqual(boundedPointer({...s,topEdge:true},p),{x:590,y:130});
+ assert.deepEqual(boundedPointer({...s,rightEdge:true},p),{x:470,y:20});
+ const corner={...s,topEdge:true,rightEdge:true};
+ assert.deepEqual(boundedPointer(corner,p),{x:470,y:130});
+ assert.deepEqual(boundedPointer(corner,ORIGIN),ORIGIN);
+ assert.deepEqual(boundedPointer(corner,{x:400,y:170}),{x:400,y:170});
+ assert.deepEqual(geometryValues(corner),geometryValues(s));
+ const moved=changeGeometry(corner,'target',20,-30);
+ assert.deepEqual(boundedPointer(moved,p),{x:490,y:100});
+ const resized=changeGeometry(corner,'corner',30,40);
+ assert.deepEqual(boundedPointer(resized,p),{x:500,y:130});
+ assert.equal(resized.topEdge,true);assert.equal(resized.rightEdge,true);
 });

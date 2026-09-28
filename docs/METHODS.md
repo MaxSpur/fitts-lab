@@ -59,11 +59,13 @@ Pointer Lock is requested synchronously from a Start/Resume click. Both promise 
 
 Guided horizontal, circular, and ordinary-button sets default to the system cursor. The cursor selector can start a new set in captured mode; earlier attempts remain in history. Automatic mode uses captured input on both sides of guided menu/window pairs so the free and bounded cases share an input path. Hard-boundary conditions require captured input. During captured movement, the virtual cursor is positioned directly from mouse events. A separate low-resolution transparent Canvas draws the live path at up to about 30 frames per second without repainting the main arena. The last completed path remains visible after a successful click. This reduces application-side work but cannot remove latency introduced by a browser's Pointer Lock implementation. Test the actual classroom browser and pointing devices before interpreting captured timing. Smooth bounded jitter is an optional sinusoidal two-frequency offset, defined as a function of time, not event count; its displayed cursor position is also the hit-test point. It is an illustration of an unsteady pointer, not a clinical impairment model. Gain is a scalar on relative input, not a replacement OS acceleration curve. The first relative movement event after lock is ignored only if it is an implausibly large cursor-warp delta.
 
-## Equations and the boundary limit
+## Equations, bits, and window edges
 
-The Method editor is an unrecorded 2D rectangle. Dragging moves it horizontally and vertically; four edge handles and a corner handle resize it. Dimensions appear inside the rectangle. Difficulty uses the same center-directed chord as the experiment. Arrow keys adjust the focused target or handle by 2 illustration units (Shift: 20); Escape cancels an active drag. The extension option fixes the near intersection on the approach line and lets the far intersection tend to infinity. It preserves the finite rectangle for restoration. All three formulations and their live values remain visible.
+The Method editor is an unrecorded 2D rectangle. Dragging moves it horizontally and vertically; four edge handles and a corner handle resize it. Dimensions appear inside the rectangle. Difficulty uses the same center-directed chord as the experiment, labeled W in the illustration. Arrow keys adjust the focused target or handle by 2 illustration units (Shift: 20); Escape cancels an active drag. All three formulations and their live values remain visible.
 
-The logarithm can be motivated by a halving analogy: reducing a region from L to W in k binary steps gives L/2^k = W, hence k = log2(L/W). This is an intuition, not a derived motor mechanism. The index and its approximately linear relationship with observed time are model choices evaluated against data.
+Top and right controls on the diagram toggle simulated window edges at the corresponding target bounds. A preview dot follows the pointer, with y constrained to the top boundary and/or x constrained to the right boundary. Both together demonstrate a corner. The edges move with the target. These controls do not capture the system cursor or record trials. The finite distance, approach width, and indices remain unchanged and are explicitly labeled as free-target geometry. They do not predict the effect of pointer constraints.
+
+A bit is a unit of information: N equally likely alternatives correspond to log2(N) bits. Two, four, and eight alternatives require one, two, and three binary choices. A spatial analogy is repeated halving: reducing an interval from L to W in k steps gives L/2^k = W, hence k = log2(L/W). This motivates a logarithmic measure of spatial precision; it is not a derived motor mechanism or a count of actual corrections. Fitts used an information-channel analogy to relate movement distance and tolerated error. The index and its approximately linear relationship with observed time are model choices evaluated against data. Fractional bit values are valid.
 
 Ordinary-target charts use Shannon difficulty:
 
@@ -72,18 +74,13 @@ ID = log2(1 + D/W)
 T = a + b*ID
 ```
 
-The coefficients are fitted descriptions of these observations. Their numerical values are not human constants. For an interval extending from d_near to d_far:
+D/W is dimensionless. Doubling distance and width together leaves ID unchanged. The +1 makes ID nonnegative for D >= 0 and zero at D = 0. Increasing ID by one bit doubles 1 + D/W and increases fitted time by b. The quantity 1 + D/W is not a literal count of visible targets. With D = 280 and W = 40, ID = log2(8) = 3 bits. If a = 100 ms and b = 100 ms/bit, predicted time is 400 ms. The coefficients are fitted descriptions, not human constants.
 
-```text
-D = (d_near + d_far)/2
-W = d_far - d_near
-Original Fitts: log2(2D/W) = log2((d_far+d_near)/(d_far-d_near))
-Welford:       log2(D/W+1/2) = log2(d_far/(d_far-d_near))
-```
+The comparison also shows Fitts' log2(2D/W) and Welford's log2(D/W + 1/2). Each formulation needs separately fitted coefficients. A zero index term does not mean zero movement time or physical effort: T still equals a.
 
-Holding the near edge fixed while the far edge tends to infinity gives zero for the original and Welford difficulty terms. Under that same interval construction, Shannon difficulty tends to log2(1.5). These are distinct formulations; the page displays both limits. A zero index term does not mean zero movement time or physical effort.
+A window edge prevents overshoot in one direction; precision along the edge and travel to it remain. A corner constrains both axes. Modeling these conditions by substituting infinite width or zero difficulty omits this change in control geometry. Hard-edge/corner records therefore have `index_difficulty=null` and are excluded from the ordinary Fitts plot. Matched free/edge sets are compared separately.
 
-This limit illustrates the disappearance of the far-end stopping-precision constraint. It is not a complete travel-time law for an unbounded target. A real pointer still travels, a menu needs precision along the edge, and a corner changes the control geometry. Hard-edge/corner records therefore have `index_difficulty=null` and are excluded from the ordinary Fitts plot.
+Sources: [Shannon (1948)](https://doi.org/10.1002/j.1538-7305.1948.tb00917.x), [Fitts (1954)](https://doi.org/10.1037/h0055392), and [MacKenzie (2013)](https://www.yorku.ca/mack/ojas2013.html).
 
 ## Charts and summaries
 
