@@ -238,7 +238,7 @@ Before class, check that the hosted project is awake, the site deploy succeeded,
 
 Open a new session, project the instructor page, and give everyone the permanent participant URL. Students need a laptop, desktop browser, and a mouse or trackpad. They do not create accounts, enter codes, or receive individual links.
 
-Use the phase buttons to recommend Horizontal → Circles → Interfaces → Results. Phase guidance does not forcibly interrupt a set or capture a cursor remotely. Students finish/review and click to continue. Follow TEACHING for a 12-minute run sheet.
+Students move through stages independently. Measurements from every stage arrive in the same classroom view. Its stage filter only changes the display; it never sends instructions to students. Follow TEACHING for a classroom run sheet.
 
 At the end, export JSON and close the session. New joins stop immediately. Already joined participants have up to ten more minutes to upload buffered data, bounded by the session's 24-hour expiry. Closing is not deleting: data remains available to its owner until explicitly deleted.
 
@@ -248,7 +248,7 @@ Delete old sessions on your chosen retention schedule. Browser-local records and
 
 The published Supabase Free Realtime limits checked for this package include 200 concurrent connections, 100 messages/second, and 2 million messages/month. Check the linked current documentation before class; limits and plans can change.
 
-Only the instructor uses a Realtime socket. A student sends compact batches through HTTPS at most once per configured interval while data is queued. The teacher also performs periodic reconciliation; students poll phase information. Those HTTP requests count toward function/database usage even though they are not Realtime messages.
+Only the instructor uses a Realtime socket. A student sends compact batches through HTTPS at most once per configured interval while data is queued. The teacher also performs periodic reconciliation; students check whether their session is still open. Those HTTP requests count toward function/database usage even though they are not Realtime messages.
 
 For 40 actively contributing students at one batch/second, plan for roughly 40 batch submissions per second before retries and other traffic. Message accounting may include deliveries to each subscriber. Multiple projected instructor tabs multiply recipients. This architecture is intended for a modest classroom, not a guaranteed free auditorium service.
 

@@ -1,5 +1,5 @@
 import {hash,seeded,shuffled} from './math.js';
-export const VERSION='1.1.0';
+export const VERSION='1.1.1';
 export const ARENA={width:960,height:460};
 export const TASKS=['horizontal','circles','interfaces'];
 export const TASK_LABELS={horizontal:'Horizontal',circles:'Circles',interfaces:'Interfaces'};
@@ -14,11 +14,11 @@ export function protocol(task,identity='local') {
     const widths=shuffled([24,64],seed);
     return Array.from({length:3},(_,block)=>widths.map(w=>{
       const layoutSeed=hash(`${identity}-horizontal-${w}-0`);
-      return{task,variant:'strips',width:w,height:300,count:16,block,condition:`horizontal-mixed-${w}`,
-        layoutSeed,positions:horizontalSequence(w,layoutSeed).slice(block*16,block*16+17)};
+      return{task,variant:'strips',width:w,height:300,count:12,block,condition:`horizontal-mixed-${w}`,
+        layoutSeed,positions:horizontalSequence(w,layoutSeed).slice(block*12,block*12+13)};
     })).flat();
   }
-  if(task==='circles')return shuffled([180,280,380],seed).flatMap(distance=>shuffled([44,22],seed+distance).map(width=>({task,variant:'ring',distance,width,height:width,count:16,condition:`circles-12-${distance}-${width}`,layoutSeed:hash(`${identity}-circle-${distance}-${width}`)})));
+  if(task==='circles')return shuffled([180,280,380],seed).flatMap(distance=>shuffled([44,22],seed+distance).map(width=>({task,variant:'ring',distance,width,height:width,count:12,condition:`circles-12-${distance}-${width}`,layoutSeed:hash(`${identity}-circle-${distance}-${width}`)})));
   const variant=BUTTON_SETS[0],layoutSeed=hash(`${identity}-${variant}`);
   const buttons={task,variant,count:24,condition:variant,layoutSeed,positions:buttonSequence(variant,layoutSeed)};
   // Keep free/edge geometry and captured input matched within each boundary pair.
@@ -28,7 +28,7 @@ export function protocol(task,identity='local') {
     const p={task,variant,count:12,condition:variant,layoutSeed};
     return{...p,positions:boundarySequence(p)};
   });
-  return [buttons,{...buttons,layoutSeed:layoutSeed+1,positions:buttonSequence(variant,layoutSeed+1)},...edges];
+  return [buttons,...edges];
 }
 export function planLabel(p) {
   if(p.task==='horizontal')return p.positions?`${p.width}px wide · varied distance · ${p.block+1}/3`:`${p.distance}px apart · ${p.width}px wide`;
@@ -95,12 +95,12 @@ export function targetFor(p,index) {
   const position=buttons[index%buttons.length];
   return{...position,w,h,shape:'rect'};
 }
-/** A seeded serial path: sixteen movements at each designed distance. */
+/** A seeded serial path: twelve movements at each designed distance. */
 export function horizontalSequence(width,seed){
   const rand=seeded(seed),lo=64+width/2,hi=896-width/2;
-  const counts=HORIZONTAL_DISTANCES.map(()=>16),total=counts.length*16;
+  const counts=HORIZONTAL_DISTANCES.map(()=>12),total=counts.length*12;
   for(const start of shuffled([400,440,520,560],seed)){
-    counts.fill(16);const path=[start],failed=new Set();
+    counts.fill(12);const path=[start],failed=new Set();
     const walk=(x,previous=-1)=>{
       if(path.length===total+1)return true;
       const key=`${x}|${previous}|${counts.join(',')}`;

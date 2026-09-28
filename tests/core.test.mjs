@@ -15,7 +15,7 @@ test('guided horizontal sets keep width fixed and balance varied distances',()=>
   const ps=protocol('horizontal','layout-test');
   assert.equal(ps.length,6);assert.deepEqual(ps.map(p=>p.width).sort((a,b)=>a-b),[24,24,24,64,64,64]);
   for(const p of ps){
-    assert.equal(p.count,16);assert.equal(p.positions.length,17);
+    assert.equal(p.count,12);assert.equal(p.positions.length,13);
     const distances=Array.from({length:p.count},(_,i)=>Math.abs(targetFor(p,i+1).x-targetFor(p,i).x));
     assert.ok(distances.every((d,i)=>!i||d!==distances[i-1]));
     assert.ok(new Set(p.positions).size>3);
@@ -24,7 +24,7 @@ test('guided horizontal sets keep width fixed and balance varied distances',()=>
   for(const w of [24,64]){
     const run=ps.filter(p=>p.width===w).sort((a,b)=>a.block-b.block);
     const distances=run.flatMap(p=>Array.from({length:p.count},(_,i)=>Math.abs(p.positions[i+1]-p.positions[i])));
-    for(const d of HORIZONTAL_DISTANCES)assert.equal(distances.filter(v=>v===d).length,16);
+    for(const d of HORIZONTAL_DISTANCES)assert.equal(distances.filter(v=>v===d).length,12);
     assert.ok(distances.every((d,i)=>!i||d!==distances[i-1]));
     for(let i=1;i<run.length;i++)assert.equal(run[i-1].positions.at(-1),run[i].positions[0]);
   }
@@ -49,13 +49,13 @@ test('fixed-distance exploration can reposition its pair with an unscored start'
   e.click(e.target,650);assert.equal(rows[4].acquisition_ms,150);
   assert.ok(Math.abs(rows[4].nominal_distance-p.distance)<1e-3);
 });
-test('ring has twelve distinct directions and actual chords shorter than its diameter',()=>{const p=protocol('circles')[0],a=targetFor(p,0),b=targetFor(p,1);assert.equal(p.count,16);assert.equal(new Set(Array.from({length:12},(_,i)=>`${targetFor(p,i).x},${targetFor(p,i).y}`)).size,12);assert.ok(Math.hypot(a.x-b.x,a.y-b.y)<p.distance);});
+test('ring has twelve distinct directions and actual chords shorter than its diameter',()=>{const p=protocol('circles')[0],a=targetFor(p,0),b=targetFor(p,1);assert.equal(p.count,12);assert.equal(new Set(Array.from({length:12},(_,i)=>`${targetFor(p,i).x},${targetFor(p,i).y}`)).size,12);assert.ok(Math.hypot(a.x-b.x,a.y-b.y)<p.distance);});
 test('guided interface buttons form varied serial sequences',()=>{
   const ps=protocol('interfaces','layout-test');
-  assert.equal(ps.length,6);
+  assert.equal(ps.length,5);
   assert.equal(ps[0].variant,'buttons-varied');
-  assert.deepEqual(ps.slice(2).map(p=>p.variant),['menu-floating','menu-edge','corner-floating','corner-edge']);
-  for(const p of ps.slice(0,2)){
+  assert.deepEqual(ps.slice(1).map(p=>p.variant),['menu-floating','menu-edge','corner-floating','corner-edge']);
+  for(const p of ps.slice(0,1)){
     assert.equal(p.count,24);
     const targets=Array.from({length:p.count+1},(_,i)=>targetFor(p,i));
     assert.equal(new Set(targets.map(t=>`${t.x},${t.y}`)).size,25);
@@ -123,8 +123,8 @@ test('boundary chart only connects comparable input conditions',()=>{
 });
 test('classroom preview follows current guided task lengths and includes circles',()=>{
   const rows=simulationRows(1,28);
-  assert.deepEqual(['horizontal','circles','interfaces'].map(t=>rows.filter(r=>r.task===t).length),[96,96,96]);
-  assert.equal(rows.filter(r=>r.variant==='buttons-varied').length,48);
+  assert.deepEqual(['horizontal','circles','interfaces'].map(t=>rows.filter(r=>r.task===t).length),[72,72,72]);
+  assert.equal(rows.filter(r=>r.variant==='buttons-varied').length,24);
   assert.equal(boundaryRows(rows).length,4);
 });
 test('ingress validation strips client identities and recomputes difficulty',()=>{const{e,rows}=engine();e.activate();e.click(e.home,0);e.click(e.target,300);const r={...rows[0],index_difficulty:999,participant_id:'FAKE',path:downsample(rows[0].path,40)};const v=validateTrial(r);assert.equal(v.participant_id,undefined);assert.notEqual(v.index_difficulty,999);assert.equal(v.hit,true);});
@@ -165,7 +165,14 @@ test('session labels reflect ended, draining and expired admission',()=>{
  assert.equal(sessionState(r,now+3600001).label,'Expired');
  assert.match(sessionLabel({...r,status:'closed'}),/Ended/);
 });
-test('all stages have 96 selections and circular distances vary independently of target size',()=>{
- for(const task of ['horizontal','circles','interfaces'])assert.equal(protocol(task,'balanced').reduce((n,p)=>n+p.count,0),96);
- for(const width of [22,44]){const ps=protocol('circles','balanced').filter(p=>p.width===width);assert.equal(ps.length,3);assert.deepEqual(ps.map(p=>p.distance).sort((a,b)=>a-b),[180,280,380]);assert.ok(ps.every(p=>p.count===16));}
+test('all stages have 72 selections and circular distances vary independently of target size',()=>{
+ for(const task of ['horizontal','circles','interfaces'])assert.equal(protocol(task,'balanced').reduce((n,p)=>n+p.count,0),72);
+ for(const width of [22,44]){const ps=protocol('circles','balanced').filter(p=>p.width===width);assert.equal(ps.length,3);assert.deepEqual(ps.map(p=>p.distance).sort((a,b)=>a-b),[180,280,380]);assert.ok(ps.every(p=>p.count===12));}
+});
+
+test('size trends require actual size variation and exclude failed attempts',()=>{
+ const rows=simulationRows(1).filter(r=>r.task==='circles');
+ const fit=trendlines(rows,'approach_width');assert.equal(fit.fits.length,1);
+ assert.ok(fit.fits[0].b<0);assert.ok(fit.lines.every(r=>Number.isFinite(r.approach_width)));
+ assert.equal(trendlines(rows.filter(r=>r.target_w===22),'approach_width').fits.length,0);
 });

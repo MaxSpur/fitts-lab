@@ -12,3 +12,14 @@ for(const name of ['basic-scatter','participant-selection'])test(`Notebook examp
  const spec=JSON.parse(await readFile(new URL(`../examples/${name}.vl.json`,import.meta.url),'utf8'));
  assert.ok(vega.parse(vegaLite.compile(spec).spec));
 });
+
+test('all three axes plot their actual measurement field with data-derived bounds',async()=>{
+ const {plotAxis}=await import('../src/analysis.js');
+ for(const [field,value] of [['distance',1001],['approach_width',73],['index_difficulty',8.2]]){
+  const axis=plotAxis([{[field]:value}],field);assert.ok(axis.maximum>=value);
+  const spec=specs.heroSpec({x:field,xMax:axis.maximum});
+  assert.equal(spec.layer[0].encoding.x.field,field);
+  const view=new vega.View(vega.parse(vegaLite.compile(spec).spec),{renderer:'none'});
+  await view.runAsync();view.finalize();
+ }
+});

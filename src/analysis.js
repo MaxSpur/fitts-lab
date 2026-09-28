@@ -24,9 +24,10 @@ export function trendlines(rows,x='index_difficulty'){
   for(const [series,a]of groups){
     if(a.length<8)continue;
     const xs=a.map(r=>r[x]),lo=Math.min(...xs),hi=Math.max(...xs);
-    if(hi-lo<(x==='distance'?40:.5))continue;
+    if(hi-lo<(x==='distance'?40:x==='approach_width'?8:.5))continue;
     // A fixed nominal distance must not acquire a trend from off-center clicks alone.
     if(x==='distance'&&new Set(a.map(r=>Math.round(r.nominal_distance/10))).size<2)continue;
+    if(x==='approach_width'&&a.every(r=>['horizontal','circles'].includes(r.task))&&new Set(a.map(r=>Math.round(r.target_w))).size<2)continue;
     const varied=a.every(r=>/^buttons-/.test(r.variant));
     const conditions=new Map();for(const r of a)conditions.set(r.condition,(conditions.get(r.condition)||0)+1);
     if(!varied&&[...conditions.values()].filter(n=>n>=3).length<2)continue;
@@ -38,11 +39,22 @@ export function trendlines(rows,x='index_difficulty'){
   return{lines,fits};
 }
 export function trendCaption(trend,x='index_difficulty'){
-  if(!trend.fits.length)return 'Trend appears after 8 successful first attempts with sufficient variation; fixed-distance runs have no distance trend.';
+  if(!trend.fits.length)return 'Trend appears after 8 successful first attempts with sufficient variation; a single size or distance does not support a trend on that axis.';
   const differing=trend.fits[0].settings.map((_,i)=>new Set(trend.fits.map(f=>f.settings[i])).size>1);
-  return trend.fits.map(f=>`${TASK_LABELS[f.task]}${f.settings.filter((_,i)=>differing[i]).map(s=>' · '+s).join('')}: T = ${f.a.toFixed(0)} ${f.b<0?'−':'+'} ${Math.abs(f.b).toFixed(1)} × ${x==='distance'?'D':'ID'} ms · R² = ${f.r2.toFixed(2)} · n = ${f.n}`).join(' | ')+' · descriptive fit to successful first attempts';
+  return trend.fits.map(f=>`${TASK_LABELS[f.task]}${f.settings.filter((_,i)=>differing[i]).map(s=>' · '+s).join('')}: T = ${f.a.toFixed(0)} ${f.b<0?'−':'+'} ${Math.abs(f.b).toFixed(1)} × ${x==='distance'?'D':x==='approach_width'?'W':'ID'} ms · R² = ${f.r2.toFixed(2)} · n = ${f.n}`).join(' | ')+' · descriptive fit to successful first attempts';
 }
 /** Deterministic display sample; calculations always use the complete filtered dataset. */
 export function displaySample(rows,limit=5000){if(rows.length<=limit)return rows;const stride=rows.length/limit;return Array.from({length:limit},(_,i)=>rows[Math.floor(i*stride)]);}
 
 export function studentColor(id){const hue=hash(id)%360;return `hsl(${hue},58%,40%)`;}
+
+/** Shared labels and data-derived bounds for the three views of the same observations. */
+export function plotAxis(rows,field='index_difficulty'){
+  const config={
+    distance:{step:100,caption:'Distance D · target-center distance (CSS px). Target size varies.'},
+    approach_width:{step:20,caption:'Size W · width along approach (CSS px); diameter for circles. Distance varies.'},
+    index_difficulty:{step:1,caption:'Index of difficulty · log₂(1 + D/W), in bits'}
+  }[field];
+  const maximum=Math.max(config.step,...rows.map(r=>Number.isFinite(r[field])?r[field]:0));
+  return {maximum:Math.ceil(maximum/config.step)*config.step,caption:config.caption};
+}

@@ -6,7 +6,7 @@ The exercise is an aside in the introduction to HCI. Keep the measurement mechan
 
 Open a new session on `classroom.html`, check a real participant connection, and have the permanent participant URL ready in the slides/chat. Present the instructor window. Guided horizontal, circular, and abstract-button sets default to the system cursor. The matched boundary sets use a captured cursor in Automatic mode; try them on the classroom machines before comparing times. Ask students to use one device throughout. They can select mouse or trackpad; choosing a category is optional and descriptive.
 
-The guided protocol contains 96 selections in each stage (288 total): six sets of 16 for Horizontal and Circles, two sets of 24 ordinary buttons, and four sets of 12 free/edge selections. Each stage therefore has equal selection count, though task difficulty affects duration. Horizontal and Circular each have six conditions with 16 observations per condition. For a short lesson, use only part of the protocol and allow students to finish their current set. Budget additional practice time for a complete run.
+The guided protocol contains 72 selections in each stage (216 total): six sets of 12 for Horizontal and Circles, one set of 24 ordinary buttons, and four sets of 12 free/edge selections. Each stage therefore has equal selection count, though task difficulty affects duration. Horizontal and Circular each have six conditions with 12 observations per condition. For a short lesson, use only part of the protocol and allow students to finish their current set. Budget additional practice time for a complete run.
 
 ## Run sheet
 
@@ -16,10 +16,10 @@ The guided protocol contains 96 selections in each stage (288 total): six sets o
 | 1:00–3:00 | Short horizontal sets. Show tiles pulsing. | “What changed when the strip became narrow? Can a farther target still be easy?” |
 | 3:00–4:30 | Sample circular sets at different distances and sizes. | “The direction changes. A circle still offers the same diameter along a center-directed approach.” |
 | 4:30–7:30 | Follow the varied-button sequence; then try the free menu before its edge-limited match. | “Which button sizes feel easier to acquire, and why?” |
-| 7:30–10:30 | Ask students to finish/review. Freeze the projection. Toggle distance → difficulty. | “These are the same clicks. We changed the horizontal variable by including target size.” |
+| 7:30–10:30 | Ask students to finish/review. Freeze the projection. Compare distance → size → difficulty. | “These are the same clicks. We changed the horizontal variable by including target size.” |
 | 10:30–12:00 | Compare completed boundary pairs and connect to dataviz. | “What happens when someone must select a small map feature, a legend entry, or a slider handle?” |
 
-Reserve up to three extra minutes for joining or questions. Do not wait for every student to complete every set before moving the discussion on. Announce transitions at review boundaries. The teacher's phase buttons only recommend the next stage; they never forcibly capture pointers or erase a student's work.
+Reserve up to three extra minutes for joining or questions. Do not wait for every student to complete every set before moving the discussion on. Announce transitions at review boundaries. Students move through the stages independently. All stages feed the same classroom view; instructor filters only change what is displayed.
 
 ## The explanation to say aloud
 
@@ -37,7 +37,7 @@ The complete explainer, mathematical qualification, data exports, and optional c
 
 ## Instructor display tips
 
-The participant mosaic has stable positions. A tile pulses when new attempts arrive, and clicking it reveals the latest recorded path. The main chart distinguishes raw first attempts from participant–condition means. Switch between distance and difficulty after collecting several different conditions. In presentation mode, distracting setup elements are hidden.
+The participant mosaic has stable positions. A tile pulses when new attempts arrive, and clicking it reveals the latest recorded path. The main chart distinguishes raw first attempts from participant–condition means. Switch between distance, size, and difficulty after collecting several different conditions. In presentation mode, distracting setup elements are hidden.
 
 Freeze stops visual updates while acquisition and synchronization continue. Resume incorporates the newly received records. The first-attempt error indicator is a reminder to interpret speed together with accuracy. The paired boundary chart compares each participant within the matched settings; because the free run always comes first, practice can also influence the difference.
 

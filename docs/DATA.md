@@ -10,7 +10,7 @@ CSV is the compact analysis table. JSON contains the same records, sampled paths
 
 | Fields | Meaning |
 |---|---|
-| `schema_version`, `app_version` | Record and application versions; currently 1 and 1.1.0. |
+| `schema_version`, `app_version` | Record and application versions; currently 1 and 1.1.1. |
 | `source` | Origin label: participant-side records, server-accepted classroom records, or explicitly synthetic simulation. Instructor top-level exports also record source mode. |
 | `id` | Unique attempt UUID. Server retries are deduplicated within participant. |
 | `participant_id`, `participant_label` | Random identity and display label. Server replaces client identity fields with its authenticated participant identity. |

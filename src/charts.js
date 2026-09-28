@@ -11,13 +11,7 @@ export class Chart {
       for(const [name,rows]of Object.entries(datasets))result.view.change(name,vega.changeset().remove(()=>true).insert(structuredClone(rows)));await result.view.runAsync();});return this.queue;
   }
   async update(datasets){const g=this.generation;this.rows={...this.rows,...datasets};this.queue=this.queue.catch(()=>{}).then(async()=>{if(g!==this.generation||!this.result)return;for(const[name,rows]of Object.entries(datasets))this.result.view.change(name,vega.changeset().remove(()=>true).insert(structuredClone(rows)));await this.result.view.runAsync();});return this.queue;}
-  async mix(value){const g=this.generation;this.queue=this.queue.catch(()=>{}).then(()=>g===this.generation?this.result?.view.signal('encodingMix',value).runAsync():undefined);return this.queue;}
   code(){if(!this.spec)return;const spec=structuredClone(this.spec);spec.datasets=structuredClone(this.rows);showCode(spec);}
   empty(message){++this.generation;this.result?.finalize();this.result=null;this.spec=null;this.rows={};noData(this.el,message);}
   destroy(){++this.generation;this.result?.finalize();this.observer.disconnect();}
-}
-export async function animateMix(chart,from,to){
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches){await chart.mix(to);return;}
-  const start=performance.now(),duration=600;
-  do{const t=Math.min(1,(performance.now()-start)/duration),e=t*t*(3-2*t);await chart.mix(from+(to-from)*e);if(t>=1)break;await new Promise(r=>setTimeout(r,40));}while(true);
 }

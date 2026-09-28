@@ -1,10 +1,10 @@
 import {sessionState,sessionLabel} from './session.js';
 import {CONFIG} from '../config.js';
 import {$,$$,text,toast,common,download,csv,copy} from './ui.js';
-import {Chart,animateMix} from './charts.js';
+import {Chart} from './charts.js';
 import {heroSpec,boundarySpec,pathSpec} from './specs.js';
 import {firstAttempts,conditionMeans,mean,pathRows} from './math.js';
-import {boundaryRows,displaySample,trendlines,trendCaption,studentColor} from './analysis.js';
+import {boundaryRows,displaySample,trendlines,trendCaption,studentColor,plotAxis} from './analysis.js';
 import {simulationRows} from './simulation.js';
 import {configured,InstructorAuth,RoomStream,localRoom,createLocalRoom,updateLocalRoom,localSnapshot,channel} from './network.js';
 import {all,removeMany,saved,save} from './storage.js';
@@ -14,7 +14,7 @@ const auth=new InstructorAuth(),charts={hero:new Chart('#class-chart'),boundary:
 let source=null,room=null,records=new Map(),participants=new Map(),lastReceived=null,selected=null,stream=null,poll=null,demoTimer=null,cursor='0',syncing=false;
 let connectionRun=0;
 let sourceGeneration=0,frozenPeople=null,frozenRows=null,renderedRows=[];
-let frozen=false,renderedCount=0,renderTimer=null,rendering=false,dirty=false,extent=1600,axis=1,animating=false;
+let frozen=false,renderedCount=0,renderTimer=null,rendering=false,dirty=false,extent=1600,axis='index_difficulty';
 let streamState='Connecting…',lastSync=null,syncError='';
 const flashes=new Set();const bc=channel();
 function id(r){return `${r.participant_id}:${r.id}`;}
@@ -44,10 +44,9 @@ function setupRoomControls(){
   const state=sessionState(room);text('#session-state',`${state.label} · ${state.detail}`);
   if(room){const o=[...$('#room-list').options].find(o=>o.value===room.id);if(o){o.textContent=sessionLabel(room);o.dataset.room=JSON.stringify(room);}}
   text('#room-title',room?.title||'');const link=new URL('./',location.href);if(source==='local')link.searchParams.set('local','1');$('#participant-address').href=link.href;$('#participant-address').textContent=link.href;
-  $$('#session-controls [data-phase]').forEach(b=>b.classList.toggle('active',b.dataset.phase===room?.phase));
   $('#end-room').disabled=!state.open;$('#delete-room').disabled=!room;$('#reset-data').disabled=!room;$('#room-list').closest('div').hidden=source==='local';$('#capacity').closest('label').hidden=source==='local';
 }
-function schedule(){dirty=true;if(renderTimer||rendering||frozen||animating)return;renderTimer=setTimeout(async()=>{renderTimer=null;if(!dirty||frozen)return;dirty=false;rendering=true;try{await render();}catch(e){toast('Chart update failed: '+e.message,true);console.error(e);}finally{rendering=false;if(dirty)schedule();}},450);}
+function schedule(){dirty=true;if(renderTimer||rendering||frozen)return;renderTimer=setTimeout(async()=>{renderTimer=null;if(!dirty||frozen)return;dirty=false;rendering=true;try{await render();}catch(e){toast('Chart update failed: '+e.message,true);console.error(e);}finally{rendering=false;if(dirty)schedule();}},450);}
 function filterRows(){const task=$('#task-filter').value,noise=$('#noise-filter').value,device=$('#device-filter').value;return firstAttempts([...records.values()],{...(task==='all'?{}:{task}),perturbation:noise}).filter(r=>(device==='all'||r.device===device)&&Number.isFinite(r.index_difficulty)&&(r.task!=='interfaces'||/^buttons-|^(wide|tall)$/.test(r.variant)));}
 async function render(){
   if(frozen)return;const generation=sourceGeneration;const allRows=[...records.values()],allFirst=firstAttempts(allRows,{perturbation:'all'}),rs=filterRows();
@@ -55,11 +54,11 @@ async function render(){
   text('#last-update',lastReceived?`Last received ${new Date(lastReceived).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`:'Nothing received yet');
   renderMosaic();
   if(rs.length){
-    const means=conditionMeans(rs.filter(r=>r.hit)),field=axis?'index_difficulty':'distance',trend=trendlines(rs,field);
+    const means=conditionMeans(rs.filter(r=>r.hit)),field=axis,trend=trendlines(rs,field);
     const max=Math.max(...rs.map(r=>r.acquisition_ms));const nextExtent=Math.max(extent,Math.ceil(max/500)*500);
-    const fitData=trend.lines;
+    const fitData=trend.lines,axisInfo=plotAxis(rs,axis);
     const chartRows=displaySample(rs).map(r=>({...r,student_color:studentColor(r.participant_id),outcome:r.hit?'Hit':'Miss'})),data={trials:chartRows,means:means.map(r=>({...r,student_color:studentColor(r.participant_id)})),fit:fitData};
-    if(!charts.hero.result||nextExtent!==extent){extent=nextExtent;await charts.hero.set(heroSpec({extent,mix:axis}),data);charts.hero.result?.view.addSignalListener('selectedPerson',(_,v)=>{const ids=v?.participant_id;selected=Array.isArray(ids)?ids[0]||null:null;focusStudent();renderSelectedPath();renderMosaic();});}else await charts.hero.update(data);
+    if(!charts.hero.result||nextExtent!==extent||charts.hero.spec.layer[0].encoding.x.field!==axis||charts.hero.spec.layer[0].encoding.x.scale.domain[1]!==axisInfo.maximum){extent=nextExtent;await charts.hero.set(heroSpec({extent,x:axis,xMax:axisInfo.maximum}),data);bindSelection();}else await charts.hero.update(data);
     if(generation!==sourceGeneration)return;
     focusStudent();renderedRows=rs;text('#fit-caption',trendCaption(trend,field)+' · pooled classroom observations');
     text('#coverage',`${rs.length} first attempts in this view · ${new Set(rs.map(r=>r.participant_id)).size} participants · ${new Set(rs.map(r=>r.condition)).size} conditions${rs.length>5000?' · faint marks show a deterministic 5,000-observation sample; calculations use all rows':''}`);
@@ -70,6 +69,7 @@ async function render(){
   if(generation!==sourceGeneration)return;
   await renderSelectedPath();renderedCount=records.size;
 }
+function bindSelection(){charts.hero.result?.view.addSignalListener('selectedPerson',(_,v)=>{const ids=v?.participant_id;selected=Array.isArray(ids)?ids[0]||null:null;focusStudent();renderSelectedPath();renderMosaic();});}
 function focusStudent(){const view=charts.hero.result?.view;if(view)view.signal('focusStudent',selected||'').runAsync().catch(console.error);}
 function renderMosaic(){
   const people=frozen&&frozenPeople?frozenPeople:participants;const grid=$('#mosaic');$('#mosaic-empty').hidden=people.size>0;
@@ -156,16 +156,19 @@ $('#delete-room').onclick=async()=>{if(!room||prompt('This permanently deletes t
   try{if(source==='local'){const rs=await all('localClass');await removeMany('localClass',rs.filter(r=>r.room_id===room.id).map(r=>r.id));updateLocalRoom({status:'deleted'});reset('local');labelSource();setupRoomControls();}else{await auth.call('delete',{room_id:room.id});reset('remote');await loadCloud();}toast('Session deleted. Already-exported files and other browsers’ local copies are unchanged.');}catch(e){toast(e.message,true);}};
 $('#load-room').onclick=async()=>{const o=$('#room-list').selectedOptions[0];if(o?.dataset.room)await attachRemote(JSON.parse(o.dataset.room));};
 $('#copy-address').onclick=()=>copy($('#participant-address').href);
-$$('[data-phase]').forEach(b=>b.onclick=async()=>{if(!room)return;try{room=source==='local'?updateLocalRoom({phase:b.dataset.phase}):(await auth.call('phase',{room_id:room.id,phase:b.dataset.phase})).room;setupRoomControls();toast('Stage guidance updated. Students switch with their own click.');}catch(e){toast(e.message,true);}});
 $('#freeze').onclick=()=>{frozen=!frozen;frozenPeople=frozen?structuredClone(participants):null;frozenRows=frozen?renderedRows:null;for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).disabled=frozen;text('#freeze',frozen?'Resume display (collecting)':'Freeze view');if(!frozen)schedule();};
 $('#present').onclick=async()=>{const on=document.body.classList.toggle('presenting');text('#present',on?'Exit presentation':'Present ⛶');try{if(on&&!document.fullscreenElement)await document.documentElement.requestFullscreen();else if(!on&&document.fullscreenElement)await document.exitFullscreen();}catch{/* The presentation layout works without browser fullscreen. */}setTimeout(()=>schedule(),100);};
 for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).onchange=()=>{selected=null;focusStudent();schedule();};
-async function axisTo(next){if(animating||axis===next)return;const previous=axis;axis=next;animating=true;$('#axis-distance').classList.toggle('active',!axis);$('#axis-difficulty').classList.toggle('active',!!axis);text('#axis-caption','Re-encoding the same observations…');
-  // Remove the fitted line during the transition; it belongs to a specific x variable.
-  if(charts.hero.result){await charts.hero.update({fit:[]});await animateMix(charts.hero,previous,next);}animating=false;text('#axis-caption',axis?'Index of difficulty · log₂(1 + D/W), in bits':'Distance to target center · CSS pixels');
-  if(frozen&&charts.hero.result){const field=axis?'index_difficulty':'distance',trend=trendlines(frozenRows||[],field);await charts.hero.update({fit:trend.lines});text('#fit-caption','Frozen · '+trendCaption(trend,field));}
-  else schedule();}
-$('#axis-distance').onclick=()=>axisTo(0);$('#axis-difficulty').onclick=()=>axisTo(1);
+async function axisTo(next){
+  if(axis===next)return;axis=next;
+  $$('[data-axis]').forEach(b=>{b.classList.toggle('active',b.dataset.axis===axis);b.setAttribute('aria-pressed',String(b.dataset.axis===axis));});
+  text('#axis-caption',plotAxis([],axis).caption);
+  if(frozen&&charts.hero.result){
+    const rows=frozenRows||[],trend=trendlines(rows,axis),data={...charts.hero.rows,fit:trend.lines};
+    await charts.hero.set(heroSpec({extent,x:axis,xMax:plotAxis(rows,axis).maximum}),data);bindSelection();focusStudent();text('#fit-caption','Frozen · '+trendCaption(trend,axis));
+  }else schedule();
+}
+$$('[data-axis]').forEach(b=>b.onclick=()=>axisTo(b.dataset.axis));
 $('#hero-code').onclick=()=>charts.hero.code();$('#boundary-code').onclick=()=>charts.boundary.code();$('#path-code').onclick=()=>charts.path.code();
 $('#class-export-csv').onclick=()=>download(`fitts-${source||'empty'}-trials.csv`,csv([...records.values()]),'text/csv;charset=utf-8');
 $('#class-export-json').onclick=()=>download(`fitts-${source||'empty'}-session.json`,{schema_version:1,app_version:VERSION,source,room,exported_at:new Date().toISOString(),participants:[...participants.values()].map(({latest,...p})=>p),trials:[...records.values()]});

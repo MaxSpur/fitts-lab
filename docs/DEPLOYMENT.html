@@ -332,10 +332,10 @@ discovering this during the introduction.</p>
 the permanent participant URL. Students need a laptop, desktop browser,
 and a mouse or trackpad. They do not create accounts, enter codes, or
 receive individual links.</p>
-<p>Use the phase buttons to recommend Horizontal → Circles → Interfaces
-→ Results. Phase guidance does not forcibly interrupt a set or capture a
-cursor remotely. Students finish/review and click to continue. Follow
-TEACHING for a 12-minute run sheet.</p>
+<p>Students move through stages independently. Measurements from every
+stage arrive in the same classroom view. Its stage filter only changes
+the display; it never sends instructions to students. Follow TEACHING
+for a classroom run sheet.</p>
 <p>At the end, export JSON and close the session. New joins stop
 immediately. Already joined participants have up to ten more minutes to
 upload buffered data, bounded by the session's 24-hour expiry. Closing
@@ -351,9 +351,10 @@ messages/month. Check the linked current documentation before class;
 limits and plans can change.</p>
 <p>Only the instructor uses a Realtime socket. A student sends compact
 batches through HTTPS at most once per configured interval while data is
-queued. The teacher also performs periodic reconciliation; students poll
-phase information. Those HTTP requests count toward function/database
-usage even though they are not Realtime messages.</p>
+queued. The teacher also performs periodic reconciliation; students
+check whether their session is still open. Those HTTP requests count
+toward function/database usage even though they are not Realtime
+messages.</p>
 <p>For 40 actively contributing students at one batch/second, plan for
 roughly 40 batch submissions per second before retries and other
 traffic. Message accounting may include deliveries to each subscriber.
@@ -511,4 +512,4 @@ triggers recovery; Freeze affects rendering only.</p>
 hash. Publish the complete <code>dist/</code> output so HTML, scripts,
 and styles use the same release even when browsers cache older
 files.</p>
-<footer>Fitts Lab 1.1.0 · <a href="DEPLOYMENT.md">Markdown source</a></footer></main></body></html>
+<footer>Fitts Lab 1.1.1 · <a href="DEPLOYMENT.md">Markdown source</a></footer></main></body></html>

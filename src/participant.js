@@ -3,7 +3,7 @@ import {$,$$,text,toast,common,download,csv} from './ui.js';
 import {ArenaController} from './engine.js';
 import {protocol,horizontalSequence,buttonSequence,boundarySequence,BUTTON_SETS,TASKS,TASK_LABELS,planLabel,taskHint,VERSION} from './protocol.js';
 import {hash,firstAttempts,mean,nearFar,pathRows,speedRows,endpointRows} from './math.js';
-import {boundaryRows,trendlines,trendCaption} from './analysis.js';
+import {boundaryRows,trendlines,trendCaption,plotAxis} from './analysis.js';
 import {Chart} from './charts.js';
 import {pathSpec,speedSpec,endpointsSpec,scatterSpec,boundarySpec} from './specs.js';
 import {put,get,all,clear,saved,save,identity} from './storage.js';
@@ -11,11 +11,11 @@ import {configured,api,localRoom,joinRoom,Outbox} from './network.js';
 common();
 const person=identity(),localLabel='P-'+person.slice(0,6).toUpperCase();
 let rows=[],sets=[],currentSet=null,task='horizontal',progress=saved('progress',{}),membership=null,joinCandidate=null;
-let refreshTimer=null,saveFailed=false,resultExtent=1600;
+let refreshTimer=null,saveFailed=false,resultExtent=1600,resultAxis='index_difficulty';
 try{rows=await all('trials');sets=await all('sets');sets.sort((a,b)=>a.created_at.localeCompare(b.created_at));}catch(e){saveFailed=true;toast('Persistent storage is unavailable. Export your measurements before closing this page.',true);}
-if(!saved('horizontal-protocol-v6',false)){progress.horizontal=0;save('progress',progress);save('horizontal-protocol-v6',true);}
-if(!saved('circles-protocol-v3',false)){progress.circles=0;save('progress',progress);save('circles-protocol-v3',true);}
-if(!saved('interfaces-protocol-v6',false)){progress.interfaces=0;save('progress',progress);save('interfaces-protocol-v6',true);}
+if(!saved('horizontal-protocol-v7',false)){progress.horizontal=0;save('progress',progress);save('horizontal-protocol-v7',true);}
+if(!saved('circles-protocol-v4',false)){progress.circles=0;save('progress',progress);save('circles-protocol-v4',true);}
+if(!saved('interfaces-protocol-v7',false)){progress.interfaces=0;save('progress',progress);save('interfaces-protocol-v7',true);}
 const charts={paths:new Chart('#path-chart'),speed:new Chart('#speed-chart'),endpoints:new Chart('#endpoint-chart'),combined:new Chart('#combined-results'),interfaces:new Chart('#interface-results')};
 const outbox=new Outbox(({pending,message,blocked})=>{
   text('#saved-count',`${rows.length} attempts saved${saveFailed?' in memory only':''}${pending?` · ${pending} awaiting upload`:''}`);
@@ -44,7 +44,7 @@ function selectedPlan(){
   }else if(task==='horizontal'){
     const completed=sets.filter(s=>s.task==='horizontal'&&s.state==='complete'&&s.plan.width===p.width&&s.plan.block!==undefined&&s.plan.protocolVersion===VERSION).length;
     p.layoutSeed=hash(`${person}-horizontal-${p.width}-${Math.floor(completed/3)}`);
-    p.positions=horizontalSequence(p.width,p.layoutSeed).slice(p.block*16,p.block*16+17);
+    p.positions=horizontalSequence(p.width,p.layoutSeed).slice(p.block*12,p.block*12+13);
   }else if(task==='interfaces'){
     const pair=p.variant.startsWith('menu')?'menu':p.variant.startsWith('corner')?'corner':p.variant;
     const completed=sets.filter(s=>s.task==='interfaces'&&s.state==='complete'&&s.plan.protocolVersion===VERSION&&
@@ -145,13 +145,14 @@ async function renderResults(){
   const rs=firstAttempts(rows,{perturbation}).filter(r=>Number.isFinite(r.index_difficulty)&&(r.task!=='interfaces'||/^buttons-|^(wide|tall)$/.test(r.variant)));
   if(rs.length){
     resultExtent=Math.max(resultExtent,Math.ceil(Math.max(...rs.map(r=>r.acquisition_ms))/500)*500);
-    const trend=trendlines(rs);await charts.combined.set(scatterSpec({height:340,extent:resultExtent}),{trials:rs,means:[],fit:trend.lines});
-    text('#combined-summary',`${rs.length} first attempts · ${rs.filter(r=>!r.hit).length} misses · ${trendCaption(trend)}`);
+    const trend=trendlines(rs,resultAxis);await charts.combined.set(scatterSpec({height:340,extent:resultExtent,x:resultAxis,xMax:plotAxis(rs,resultAxis).maximum}),{trials:rs,means:[],fit:trend.lines});
+    text('#combined-summary',`${rs.length} first attempts · ${rs.filter(r=>!r.hit).length} misses · ${trendCaption(trend,resultAxis)}`);
   }else{charts.combined.empty('Complete some selections to compare stages here.');text('#combined-summary','');}
   const br=boundaryRows(rows,perturbation);
   if(br.length){await charts.interfaces.set(boundarySpec(),{boundaries:br});text('#interfaces-summary','Within each pair, the target sequence matches. The bold line averages complete participant pairs. Only control approaches are compared, and protocol versions stay separate. Current runs put free before edge, so practice may affect the difference.');}else charts.interfaces.empty('Complete a menu or window-edge set to start the matched comparison.');
 }
 function scheduleCharts(full=false){if(refreshTimer&&!full)return;clearTimeout(refreshTimer);refreshTimer=setTimeout(async()=>{refreshTimer=null;try{await renderMini();if(full||!arena.active())await renderResults();}catch(e){toast('Chart update failed: '+e.message,true);}},full?30:650);}
+$$('[data-result-axis]').forEach(b=>b.onclick=()=>{resultAxis=b.dataset.resultAxis;$$('[data-result-axis]').forEach(q=>{q.classList.toggle('active',q===b);q.setAttribute('aria-pressed',String(q===b));});text('#result-axis-caption',plotAxis([],resultAxis).caption);renderResults();});
 $('#set-history').onchange=renderMini;$('#result-condition').onchange=renderResults;
 $$('[data-chart-code]').forEach(b=>b.onclick=()=>charts[b.dataset.chartCode].code());
 $('#export-csv').onclick=()=>download('fitts-trials.csv',csv(rows),'text/csv;charset=utf-8');
@@ -185,20 +186,16 @@ function updateMembership(){
   $('#join-class').hidden=!!membership;$('#leave-class').hidden=!membership;
   text('#session-title',membership?`${membership.room.title} · ${membership.credential.participant_label}`:'Local session');
   text('#session-description',membership?`Sharing new measurements${membership.credential.source==='local'?' in a same-browser rehearsal':''}.`:'Saved in this browser. Nothing new is uploaded unless you join a classroom.');
-  if(!membership)$('#class-recommendation').hidden=true;outbox.status();
+  outbox.status();
 }
-function recommend(room){if(!membership)return;membership.room=room;
-  if(room.phase&&room.phase!==task){$('#class-recommendation').hidden=false;text('#recommendation-text',room.phase==='results'?'The class is discussing the results. Finish your current set, then look at the projection.':`The class is exploring ${TASK_LABELS[room.phase]}. Finish your set or use the button to switch.`);text('#follow-class',room.phase==='results'?'View my results':'Go to this stage');}else $('#class-recommendation').hidden=true;
-}
-$('#follow-class').onclick=()=>{const phase=membership?.room.phase;if(phase==='results')$('#results').scrollIntoView({behavior:'smooth'});else if(TASKS.includes(phase))switchTask(phase);};
 setInterval(async()=>{
   if(!membership||document.hidden)return;
   try{const room=membership.credential.source==='local'?localRoom():(await api('status',{slug:CONFIG.classroomSlug,room_id:membership.room.id})).room;
     if(!room||room.id!==membership.room.id||room.status!=='open'){
       // End sharing only at a safe boundary. Already-completed records remain queued.
-      if(arena.active()){recommend({...membership.room,phase:'results'});return;}
+      if(arena.active()){text('#session-description','Session ended. Finish this set; further work stays local.');return;}
       membership=null;save('active-membership',null);updateMembership();prepare();toast('The classroom has ended. Further exploration stays local.');
-    }else recommend(room);
+    }else membership.room=room;
   }catch{/* The durable outbox handles interruptions; do not discard membership on a transient failure. */}
 },CONFIG.participantPollMs);
 for(const q of ['device','jitter','gain']){const v=saved(q,null);if(v!==null){if(q==='jitter')$('#'+q).checked=v;else $('#'+q).value=v;}}

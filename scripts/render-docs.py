@@ -18,6 +18,6 @@ for src in sorted((ROOT/'docs').glob('*.md')):
  title=src.read_text().splitlines()[0].lstrip('# ')
  html=md.render(src.read_text()) if md else subprocess.run(['pandoc','-f','gfm','-t','html'],input=src.read_text(),text=True,capture_output=True,check=True).stdout
  html=re.sub(r'href="([^"#]+)\.md([#"]?)',r'href="\1.html\2',html)
- page=f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)} · Fitts Lab</title><style>{style}</style></head><body>{nav}<main>{html}<footer>Fitts Lab 1.1.0 · <a href="{src.name}">Markdown source</a></footer></main></body></html>'
+ page=f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)} · Fitts Lab</title><style>{style}</style></head><body>{nav}<main>{html}<footer>Fitts Lab 1.1.1 · <a href="{src.name}">Markdown source</a></footer></main></body></html>'
  src.with_suffix('.html').write_text(page)
 print('Generated formatted documentation.')

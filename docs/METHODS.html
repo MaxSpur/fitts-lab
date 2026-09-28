@@ -78,25 +78,25 @@ is different from projected bounding-box width and from statistically
 effective width inferred from endpoint variance. There is no claim that
 it is a universal 2D Fitts model.</p>
 <h2 id="default-conditions">Default conditions</h2>
-<p>Each stage has 96 scored selections. Horizontal and Circles each use
-six sets of 16; Interfaces uses two ordinary-button sets of 24 and four
+<p>Each stage has 72 scored selections. Horizontal and Circles each use
+six sets of 12; Interfaces uses one ordinary-button set of 24 and four
 boundary sets of 12. Starting clicks and retries are additional.</p>
 <p>Horizontal: widths 24 and 64 alternate across six sets, with the
-first width shuffled. Designed distances 160, 360, and 560 occur sixteen
+first width shuffled. Designed distances 160, 360, and 560 occur twelve
 times at each width across three sets, with no adjacent repeated
 distance. Positions are seeded and vary across the strip. Custom
 exploration retains its separate 12-selection schedule.</p>
 <p>Circles: ring diameters 180, 280, and 380 crossed with target
-diameters 22 and 44, sixteen selections in each of the six conditions.
+diameters 22 and 44, twelve selections in each of the six conditions.
 The actual step-five travel chords are approximately 174, 270, and 367
 logical units. Target size and movement distance vary independently
 across sets, and order is seeded per participant. The twelve-position
 ring preserves the same twelve movement directions at each distance.</p>
-<p>Interfaces: two differently seeded runs of 24 abstract button
-selections, each after one unscored start. Widths and heights span
-normal UI proportions; each successful click activates the next button
-without homing. Distances and sizes vary together, so these observations
-are exploratory rather than a controlled size comparison.</p>
+<p>Interfaces: one seeded run of 24 abstract button selections, after
+one unscored start. Widths and heights span normal UI proportions; each
+successful click activates the next button without homing. Distances and
+sizes vary together, so these observations are exploratory rather than a
+controlled size comparison.</p>
 <p>Two matched boundary pairs follow: menu items with or without a hard
 top edge, and window controls with or without hard top and left edges.
 Each side has twelve successes after one unscored starting button. Six
@@ -200,12 +200,12 @@ by its successful timings alone.</p>
 buttons show descriptive ordinary least squares trendlines through
 successful first attempts. Each line requires at least eight successful
 first attempts and an observed difficulty span of at least 0.5 bits (or
-40 CSS pixels on the distance axis). Horizontal and Circular fits also
-require at least two planned conditions with three successful
-observations each. Varied buttons use their continuous geometric
-variation. Lines stop at the observed range; no trials are removed just
-for being slow. Equations, sample sizes, and R² describe the successful
-observations, with misses displayed separately.</p>
+40 CSS pixels on Distance, 8 CSS pixels on Size). Horizontal and
+Circular fits also require at least two planned conditions with three
+successful observations each. Varied buttons use their continuous
+geometric variation. Lines stop at the observed range; no trials are
+removed just for being slow. Equations, sample sizes, and R² describe
+the successful observations, with misses displayed separately.</p>
 <p>Input mode, device, gain, perturbation, jitter amplitude, task, and
 application version define separate fit groups. Classroom lines pool
 successful first attempts within each group, so participants
@@ -227,10 +227,13 @@ measured traces and target references.</p>
 <p>Classroom raw marks are deterministically sampled to 5,000 if needed
 for display speed; all records remain stored/exportable, and means/fits
 use the full selected dataset. The time axis only expands as larger
-values arrive; data is not silently discarded to fit a fixed range. The
-distance↔︎difficulty animation moves the same points between two labeled
-encodings. The fit is hidden during this transition, then recomputed for
-the selected x variable.</p>
+values arrive; data is not silently discarded to fit a fixed range.
+Distance, Size, and Difficulty show the same observations on three axes.
+Size uses <code>approach_width</code>: diameter for circles, width along
+the approach for rectangles. Distance and Size fits are descriptive
+single-variable summaries; the other geometric variable is not held
+fixed. Axis limits follow the data. Fits are recomputed for the selected
+variable, including while the view is frozen.</p>
 <p>The boundary chart connects each participant within a matched pair,
 protocol version, and consistent input settings. Only approaches to menu
 or window controls enter this comparison; the intervening button
@@ -276,4 +279,4 @@ API</a> and <a
 href="https://vega.github.io/vega-lite/docs/selection.html">Vega-Lite
 selections</a>.</li>
 </ul>
-<footer>Fitts Lab 1.1.0 · <a href="METHODS.md">Markdown source</a></footer></main></body></html>
+<footer>Fitts Lab 1.1.1 · <a href="METHODS.md">Markdown source</a></footer></main></body></html>
