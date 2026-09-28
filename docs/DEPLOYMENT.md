@@ -226,6 +226,12 @@ Open the participant URL on a **second computer or a different browser profile**
 
 The automated **cloud smoke test** complements this rehearsal. Create a local ignored `.env.smoke` file with your instructor credentials, run `node --env-file=.env.smoke scripts/cloud-smoke.mjs`, then remove the file. Instructions and the exact tested actions are in TESTING. It creates and deletes only its own uniquely named test room. It does not replace the two-browser/private-Realtime test.
 
+## Resetting classroom measurements
+
+Use **Session & participant link → Reset data…** to clear the selected session’s classroom trials after confirmation. Export first if you need a copy. The session, participants, and join credentials remain; student-local results and exports are unchanged. New or queued uploads can appear after the reset. Other instructor views clear on the reset notification or the next poll, including frozen views. Local rehearsal supports the same operation.
+
+Existing installations must apply `supabase/migrations/202609280001_reset_classroom.sql` once and redeploy `classroom-api` before publishing this control. This migration adds a room data revision and an owner-checked reset function; applying it does not reset any session.
+
 ## 10. Running the class
 
 Before class, check that the hosted project is awake, the site deploy succeeded, and the school's network permits the Edge Function and WebSocket connections. Rehearse in the actual room when possible. Free projects can be paused after inactivity; check the dashboard rather than discovering this during the introduction.

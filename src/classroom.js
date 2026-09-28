@@ -24,10 +24,23 @@ function receive(newRows,animate=true){let added=0;for(const r of newRows){if(!r
 }if(added){lastReceived=Date.now();if(frozen)text('#freeze',`Resume · ${records.size-renderedCount} new`);else schedule();}}
 function receivePerson(p){participants.set(p.id,{...participants.get(p.id),...p,count:participants.get(p.id)?.count||0});if(!frozen)schedule();}
 function labelSource(){text('#source-label',source==='simulation'?'Simulation':source==='local'?'Local rehearsal':source==='import'?'Imported session':'Live classroom');text('#source-detail',source==='simulation'?'Preview data is isolated from real sessions.':source==='local'?'Open the participant link in another tab of this browser profile.':source==='import'?'This view is not connected to a classroom.':'New measurements appear as the class works.');text('#room-title',room?.title||'');}
+function acceptRoom(next){
+  if(!next||room&&next.id===room.id&&(next.data_revision||0)<(room.data_revision||0))return;
+  if(room&&next.id===room.id&&(next.data_revision||0)!==(room.data_revision||0)){
+    sourceGeneration++;records.clear();cursor='0';selected=null;lastReceived=null;renderedCount=0;extent=1600;
+    frozen=false;frozenPeople=null;frozenRows=null;renderedRows=[];flashes.clear();
+    for(const p of participants.values()){p.count=0;delete p.latest;}
+    for(const c of Object.values(charts))c.empty('No measurements since reset.');
+    $('#mosaic').innerHTML='';text('#freeze','Freeze view');
+    for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).disabled=false;
+    text('#selected-path-title','Movement path');text('#selected-path-note','');
+  }
+  room=next;setupRoomControls();schedule();
+}
 function setupRoomControls(){
   text('#room-title',room?.title||'');const link=new URL('./',location.href);if(source==='local')link.searchParams.set('local','1');$('#participant-address').href=link.href;$('#participant-address').textContent=link.href;
   $$('#session-controls [data-phase]').forEach(b=>b.classList.toggle('active',b.dataset.phase===room?.phase));
-  $('#end-room').disabled=!room||room.status!=='open';$('#delete-room').disabled=!room;$('#room-list').closest('div').hidden=source==='local';$('#capacity').closest('label').hidden=source==='local';
+  $('#end-room').disabled=!room||room.status!=='open';$('#delete-room').disabled=!room;$('#reset-data').disabled=!room;$('#room-list').closest('div').hidden=source==='local';$('#capacity').closest('label').hidden=source==='local';
 }
 function schedule(){dirty=true;if(renderTimer||rendering||frozen||animating)return;renderTimer=setTimeout(async()=>{renderTimer=null;if(!dirty||frozen)return;dirty=false;rendering=true;try{await render();}catch(e){toast('Chart update failed: '+e.message,true);console.error(e);}finally{rendering=false;if(dirty)schedule();}},450);}
 function filterRows(){const task=$('#task-filter').value,noise=$('#noise-filter').value,device=$('#device-filter').value;return firstAttempts([...records.values()],{task,perturbation:noise}).filter(r=>(device==='all'||r.device===device)&&Number.isFinite(r.index_difficulty)&&(task!=='interfaces'||/^buttons-/.test(r.variant)));}
@@ -75,12 +88,14 @@ async function renderSelectedPath(){
 async function syncRemote(){
   if(syncing||!room||source!=='remote')return;syncing=true;const roomId=room.id;
   try{let more=true,pages=0;while(more&&pages++<100){const result=await auth.call('snapshot',{room_id:roomId,after:cursor,limit:500});if(room?.id!==roomId||source!=='remote')return;
+      if(result.room&&(result.room.data_revision||0)<(room.data_revision||0)){more=true;continue;}
+      if(result.room&&(result.room.data_revision||0)!==(room.data_revision||0)){acceptRoom(result.room);more=true;continue;}
       for(const p of result.participants||[])receivePerson(p);receive(result.trials||[],cursor!=='0');cursor=result.cursor||cursor;more=!!result.has_more;if(result.room){room=result.room;setupRoomControls();}}
   }catch(e){text('#connection-state',`Sync: ${e.message}`);}finally{syncing=false;}
 }
 async function attachRemote(next){
   reset('remote');room=next;labelSource();setupRoomControls();save('selected-room',room.id);
-  stream=new RoomStream(auth,room.id,(event,payload)=>{if(event==='trials')receive(payload.rows||[]);else if(event==='participant')receivePerson(payload);else if(event==='room'){room={...room,...payload};setupRoomControls();}else if(event==='connected')syncRemote();},s=>text('#connection-state',s));
+  stream=new RoomStream(auth,room.id,(event,payload)=>{if(event==='trials')receive(payload.rows||[]);else if(event==='participant')receivePerson(payload);else if(event==='room'){acceptRoom({...room,...payload});syncRemote();}else if(event==='connected')syncRemote();},s=>text('#connection-state',s));
   await syncRemote();poll=setInterval(syncRemote,CONFIG.instructorPollMs);schedule();
 }
 async function loadCloud(){
@@ -89,8 +104,8 @@ async function loadCloud(){
   const preferred=result.rooms.find(r=>r.id===saved('selected-room',null))||result.rooms[0];
   if(preferred){$('#room-list').value=preferred.id;await attachRemote(preferred);}else{reset('remote');labelSource();setupRoomControls();$('#session-controls').open=true;text('#connection-state','Signed in · open a session');}
 }
-$('#local-mode').onclick=async()=>{reset('local');room=localRoom();if(!room||room.status!=='open')room=createLocalRoom();labelSource();setupRoomControls();$('#session-controls').open=true;text('#connection-state','Local · this browser only');const snap=await localSnapshot(room.id);for(const p of snap.participants)receivePerson(p);receive(snap.trials,false);poll=setInterval(async()=>{if(!room||source!=='local')return;const s=await localSnapshot(room.id);for(const p of s.participants)receivePerson(p);receive(s.trials,false);},1500);schedule();};
-if(bc)bc.onmessage=e=>{const m=e.data;if(source!=='local'||m.room_id!==room?.id)return;if(m.type==='trials')receive(m.rows);if(m.type==='participant')receivePerson(m.participant);};
+$('#local-mode').onclick=async()=>{reset('local');room=localRoom();if(!room||room.status!=='open')room=createLocalRoom();labelSource();setupRoomControls();$('#session-controls').open=true;text('#connection-state','Local · this browser only');const snap=await localSnapshot(room.id);for(const p of snap.participants)receivePerson(p);receive(snap.trials,false);poll=setInterval(async()=>{if(!room||source!=='local')return;acceptRoom(localRoom());const s=await localSnapshot(room.id);for(const p of s.participants)receivePerson(p);receive(s.trials,false);},1500);schedule();};
+if(bc)bc.onmessage=e=>{const m=e.data;if(source!=='local'||m.room_id!==room?.id)return;if(m.type==='trials')receive(m.rows);if(m.type==='participant')receivePerson(m.participant);if(m.type==='room')acceptRoom(m.room);};
 $('#simulate-mode').onclick=()=>{
   reset('simulation');labelSource();text('#connection-state','Preview · synthetic data only');const pool=simulationRows();receive(pool.splice(0,720),false);
   demoTimer=setInterval(()=>{if(!pool.length){clearInterval(demoTimer);text('#connection-state','Simulation complete');return;}receive(pool.splice(0,8));},220);schedule();
@@ -107,6 +122,17 @@ $('#create-room').onclick=async()=>{
   try{if(source==='local'){updateLocalRoom({status:'closed'});createLocalRoom($('#new-title').value);await $('#local-mode').onclick();}else{const result=await auth.call('create',{slug:CONFIG.classroomSlug,title:$('#new-title').value,capacity:Number($('#capacity').value)});await loadCloud();await attachRemote(result.room);}}catch(e){toast(e.message,true);}
 };
 $('#end-room').onclick=async()=>{if(!room||!confirm('End this session? New joins stop now. Existing queued uploads are accepted for ten more minutes.'))return;try{room=source==='local'?updateLocalRoom({status:'closed'}):(await auth.call('close',{room_id:room.id})).room;setupRoomControls();toast('Session ended. Buffered uploads have a ten-minute grace period.');}catch(e){toast(e.message,true);}};
+$('#reset-data').onclick=async()=>{
+  if(!room||!confirm('Reset all measurements in this session? This permanently removes the classroom trials and clears the charts. Participants stay joined and the session stays open if it is open. Export first if needed. Student-local data and exports are unchanged; queued or new uploads can arrive afterward.'))return;
+  const button=$('#reset-data');button.disabled=true;
+  try{
+    if(source==='local'){
+      const rs=await all('localClass');await removeMany('localClass',rs.filter(r=>r.room_id===room.id&&r.kind==='trial').map(r=>r.id));
+      acceptRoom(updateLocalRoom({data_revision:(room.data_revision||0)+1}));
+    }else{const result=await auth.call('reset-data',{room_id:room.id});acceptRoom(result.room);await syncRemote();}
+    toast('Classroom measurements reset. Participants can continue.');
+  }catch(e){toast(e.message,true);}finally{button.disabled=!room;}
+};
 $('#delete-room').onclick=async()=>{if(!room||prompt('This permanently deletes the session and its measurements. Type DELETE to confirm.')!=='DELETE')return;
   try{if(source==='local'){const rs=await all('localClass');await removeMany('localClass',rs.filter(r=>r.room_id===room.id).map(r=>r.id));updateLocalRoom({status:'deleted'});reset('local');labelSource();setupRoomControls();}else{await auth.call('delete',{room_id:room.id});reset('remote');await loadCloud();}toast('Session deleted. Already-exported files and other browsers’ local copies are unchanged.');}catch(e){toast(e.message,true);}};
 $('#load-room').onclick=async()=>{const o=$('#room-list').selectedOptions[0];if(o?.dataset.room)await attachRemote(JSON.parse(o.dataset.room));};

@@ -67,6 +67,7 @@ export async function handle(request,env,fetcher=fetch){
       const ts=await rest(`trials?room_id=eq.${r.id}&sequence=gt.${after}&order=sequence.asc&limit=${limit}&select=sequence,data`);
       return respond({room:r,participants,trials:ts.map(t=>({...t.data,seq:String(t.sequence)})),cursor:ts.length?String(ts.at(-1).sequence):after,has_more:ts.length===limit});
     }
+    if(b.action==='reset-data')return respond(await rest('rpc/reset_fitts_room_data','POST',{p_room:r.id,p_owner:owner}));
     if(b.action==='phase'){const phase=choice(b.phase,['horizontal','circles','interfaces','results'],'phase');const rs=await rest(`rooms?id=eq.${r.id}&owner_id=eq.${owner}`,'PATCH',{phase});return respond({room:rs[0]});}
     if(b.action==='close'){const rs=await rest(`rooms?id=eq.${r.id}&owner_id=eq.${owner}`,'PATCH',{status:'closed',accept_until:new Date(Math.min(Date.parse(r.expires_at),Date.now()+600000)).toISOString()});return respond({room:rs[0]});}
     if(b.action==='delete'){await rest(`rooms?id=eq.${r.id}&owner_id=eq.${owner}`,'DELETE');return respond({deleted:true});}

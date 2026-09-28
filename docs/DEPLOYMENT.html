@@ -308,6 +308,20 @@ instructor credentials, run
 remove the file. Instructions and the exact tested actions are in
 TESTING. It creates and deletes only its own uniquely named test room.
 It does not replace the two-browser/private-Realtime test.</p>
+<h2 id="resetting-classroom-measurements">Resetting classroom
+measurements</h2>
+<p>Use <strong>Session &amp; participant link → Reset data…</strong> to
+clear the selected session’s classroom trials after confirmation. Export
+first if you need a copy. The session, participants, and join
+credentials remain; student-local results and exports are unchanged. New
+or queued uploads can appear after the reset. Other instructor views
+clear on the reset notification or the next poll, including frozen
+views. Local rehearsal supports the same operation.</p>
+<p>Existing installations must apply
+<code>supabase/migrations/202609280001_reset_classroom.sql</code> once
+and redeploy <code>classroom-api</code> before publishing this control.
+This migration adds a room data revision and an owner-checked reset
+function; applying it does not reset any session.</p>
 <h2 id="10-running-the-class">10. Running the class</h2>
 <p>Before class, check that the hosted project is awake, the site deploy
 succeeded, and the school's network permits the Edge Function and

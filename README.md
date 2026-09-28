@@ -75,3 +75,5 @@ Vega 6.2.0 and Vega-Lite 6.4.2 are bundled locally. See `vendor/THIRD_PARTY_NOTI
 Original application code is MIT-licensed; see LICENSE. Third-party components retain their own licenses.
 
 The classroom view provides compact task and device filters, participant paths, and descriptive trendlines. Freeze pauses the display while data collection continues.
+
+In the classroom’s **Session & participant link** controls, **Reset data…** clears classroom measurements after confirmation while keeping participants joined. Export any results you need first. Student-local copies remain, and queued uploads may arrive afterward.
