@@ -3,25 +3,21 @@ export const SCHEMA='https://vega.github.io/schema/vega-lite/v6.json';
 export const theme={background:'transparent',font:'Arial',view:{stroke:null},axis:{labelColor:'#596563',titleColor:'#414b49',gridColor:'#e9ece7',domain:false,tickColor:'#cbd1cb',titleFontWeight:500,labelFontSize:11,titleFontSize:12,titlePadding:12},legend:{labelColor:'#596563',title:null,orient:'bottom',symbolType:'circle'}};
 const base=(height=230)=>({$schema:SCHEMA,width:'container',height,autosize:{type:'fit',contains:'padding'},config:theme});
 const tooltip=[{field:'participant_label',title:'Participant'},{field:'distance',title:'Distance (CSS px)',format:'.1f'},{field:'target_w',title:'Target width (CSS px)',format:'.1f'},{field:'target_h',title:'Target height (CSS px)',format:'.1f'},{field:'index_difficulty',title:'Difficulty (bits)',format:'.2f'},{field:'acquisition_ms',title:'Acquisition (ms)',format:'.0f'},{field:'hit',title:'Hit'},{field:'variant',title:'Condition'}];
-export function scatterSpec({x='index_difficulty',height=270,extent=2000,interactive=true}={}){
-  const axes={x:{field:x,type:'quantitative',title:x==='distance'?'Distance (CSS px)':'Index of difficulty (bits)',scale:{zero:true,domain:x==='distance'?[0,960]:[0,7]}},
-    y:{field:'acquisition_ms',type:'quantitative',title:'Acquisition time (ms)',scale:{domain:[0,extent]}}};
-  return {...base(height),layer:[
-    {data:{name:'trials'},...(interactive?{params:[{name:'picked',select:{type:'point',fields:['participant_id'],on:'click',clear:'dblclick'}}]}:{}),
-      mark:{type:'point',filled:true,size:34},encoding:{...axes,color:{field:'outcome',type:'nominal',scale:{domain:['Hit','Miss'],range:['#387d87','#bd5b2f']}},
-      opacity:interactive?{condition:{param:'picked',value:.72},value:.15}:{value:.5},tooltip}},
-    {data:{name:'fit'},mark:{type:'line',strokeWidth:2.5,color:'#283936',clip:true},encoding:{...axes,detail:{field:'series'},tooltip:[{field:'label',title:'Fit settings'},{field:'n',title:'Successful first attempts'},{field:'r2',title:'R²',format:'.2f'},{field:'a',title:'Intercept (ms)',format:'.1f'},{field:'b',title:'Slope',format:'.1f'}]}}
-  ]};
-}
-export function heroSpec({height=300,extent=2000,mix=1}={}){
+const stageShape={field:'task',type:'nominal',title:'Stage',scale:{domain:['horizontal','circles','interfaces'],range:['square','circle','diamond']},legend:{labelExpr:"{'horizontal':'Horizontal','circles':'Circles','interfaces':'Interfaces'}[datum.label]"}};
+const stageDash={field:'task',type:'nominal',title:'Stage',scale:{domain:['horizontal','circles','interfaces'],range:[[1,0],[6,3],[2,3]]},legend:stageShape.legend};
+export function scatterSpec({height=300,extent=2000,x='index_difficulty'}={}){return heroSpec({height,extent,mix:x==='distance'?0:1,classroom:false});}
+export function heroSpec({height=320,extent=2000,mix=1,classroom=true}={}){
   const x={field:'plot_x',type:'quantitative',title:null,scale:{domain:[0,1]},axis:{values:[0,.2,.4,.6,.8,1],labelExpr:"encodingMix > .999 ? format(datum.value*7,'.1f') : encodingMix < .001 ? format(datum.value*960,'.0f') : ''"}};
   const y={field:'acquisition_ms',type:'quantitative',title:'Acquisition time (ms)',scale:{domain:[0,extent]}};
-  return {...base(height),params:[{name:'encodingMix',value:mix}],
-    layer:[
-      {params:[{name:'selectedPerson',select:{type:'point',fields:['participant_id'],on:'click',clear:'dblclick'}}],data:{name:'trials'},transform:[{calculate:'(1-encodingMix)*datum.distance/960 + encodingMix*datum.index_difficulty/7',as:'plot_x'}],mark:{type:'point',filled:true,size:28},encoding:{x,y,color:{field:'outcome',scale:{domain:['Hit','Miss'],range:['#387d87','#bd5b2f']}},opacity:{condition:{param:'selectedPerson',value:.4},value:.06},tooltip}},
-      {data:{name:'means'},transform:[{calculate:'(1-encodingMix)*datum.distance/960 + encodingMix*datum.index_difficulty/7',as:'plot_x'}],mark:{type:'point',filled:true,size:70,stroke:'white',strokeWidth:1},encoding:{x,y,color:{value:'#203455'},opacity:{condition:{param:'selectedPerson',value:.95},value:.2},tooltip:[...tooltip,{field:'n',title:'Successful first attempts'}]}},
-      {data:{name:'fit'},transform:[{calculate:'(1-encodingMix)*datum.distance/960 + encodingMix*datum.index_difficulty/7',as:'plot_x'}],mark:{type:'line',strokeWidth:2.5,color:'#283936',clip:true},encoding:{x,y,detail:{field:'series'},tooltip:[{field:'label',title:'Fit settings'},{field:'n'},{field:'r2',title:'R²',format:'.2f'}]}}
-    ]};
+  const transform=[{calculate:'(1-encodingMix)*datum.distance/960 + encodingMix*datum.index_difficulty/7',as:'plot_x'}];
+  const color=classroom?{field:'student_color',type:'nominal',scale:null,legend:null}:{value:'#387d87'};
+  return {...base(height),params:[{name:'encodingMix',value:mix},{name:'focusStudent',value:''}],layer:[
+    {params:[{name:'selectedPerson',select:{type:'point',fields:['participant_id'],on:'click',clear:'dblclick'}}],data:{name:'trials'},transform,
+      mark:{type:'point',size:44,strokeWidth:1.3},encoding:{x,y,shape:stageShape,fill:classroom?{condition:{test:'datum.hit',...color},value:'transparent'}:{condition:{test:'datum.hit',value:'#387d87'},value:'transparent'},stroke:color,
+      opacity:{condition:{test:"!focusStudent || datum.participant_id === focusStudent",value:.55},value:.06},tooltip}},
+    {data:{name:'means'},transform,mark:{type:'point',filled:true,size:100,stroke:'white',strokeWidth:1},encoding:{x,y,shape:stageShape,color,opacity:{condition:{test:"!focusStudent || datum.participant_id === focusStudent",value:.9},value:.08},tooltip:[...tooltip,{field:'n',title:'Successful first attempts'}]}},
+    {data:{name:'fit'},transform,mark:{type:'line',strokeWidth:2,color:'#283936',clip:true},encoding:{x,y,strokeDash:stageDash,detail:{field:'series'},tooltip:[{field:'task',title:'Stage'},{field:'label',title:'Settings'},{field:'n',title:'Successful attempts'},{field:'r2',title:'R²',format:'.2f'}]}}
+  ]};
 }
 export function pathSpec(){return{...base(190),data:{name:'paths'},layer:[
   {data:{values:[{}]},mark:{type:'rule',color:'#b8c3d4',strokeDash:[4,4]},encoding:{x:{datum:1,type:'quantitative'}}},

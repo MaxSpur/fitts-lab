@@ -1,9 +1,10 @@
+import {sessionState,sessionLabel} from './session.js';
 import {CONFIG} from '../config.js';
 import {$,$$,text,toast,common,download,csv,copy} from './ui.js';
 import {Chart,animateMix} from './charts.js';
 import {heroSpec,boundarySpec,pathSpec} from './specs.js';
 import {firstAttempts,conditionMeans,mean,pathRows} from './math.js';
-import {boundaryRows,displaySample,trendlines,trendCaption} from './analysis.js';
+import {boundaryRows,displaySample,trendlines,trendCaption,studentColor} from './analysis.js';
 import {simulationRows} from './simulation.js';
 import {configured,InstructorAuth,RoomStream,localRoom,createLocalRoom,updateLocalRoom,localSnapshot,channel} from './network.js';
 import {all,removeMany,saved,save} from './storage.js';
@@ -11,16 +12,18 @@ import {TASK_LABELS,VERSION} from './protocol.js';
 common();
 const auth=new InstructorAuth(),charts={hero:new Chart('#class-chart'),boundary:new Chart('#class-boundaries'),path:new Chart('#class-path')};
 let source=null,room=null,records=new Map(),participants=new Map(),lastReceived=null,selected=null,stream=null,poll=null,demoTimer=null,cursor='0',syncing=false;
+let connectionRun=0;
 let sourceGeneration=0,frozenPeople=null,frozenRows=null,renderedRows=[];
 let frozen=false,renderedCount=0,renderTimer=null,rendering=false,dirty=false,extent=1600,axis=1,animating=false;
+let streamState='Connecting…',lastSync=null,syncError='';
 const flashes=new Set();const bc=channel();
 function id(r){return `${r.participant_id}:${r.id}`;}
-function reset(next){sourceGeneration++;frozenPeople=null;frozenRows=null;renderedRows=[];for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).disabled=false;stream?.close();stream=null;clearInterval(poll);clearInterval(demoTimer);clearTimeout(renderTimer);cursor='0';source=next;records=new Map();participants=new Map();room=null;selected=null;flashes.clear();extent=1600;lastReceived=null;renderedCount=0;frozen=false;syncing=false;
-  text('#freeze','Freeze view');$('#source-banner').classList.toggle('simulation',next==='simulation');$('#session-controls').hidden=!['local','remote'].includes(next);
-  for(const c of Object.values(charts))c.empty('Waiting for measurements.');$('#mosaic').innerHTML='';$('#mosaic-empty').hidden=false;text('#participant-count','0');text('#attempt-count','0');text('#error-count','—');text('#last-update','Nothing received yet');text('#fit-caption','Waiting for enough successful trials to fit a line.');text('#coverage','');
+function reset(next){connectionRun++;sourceGeneration++;frozenPeople=null;frozenRows=null;renderedRows=[];for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).disabled=false;stream?.close();stream=null;clearInterval(poll);clearInterval(demoTimer);clearTimeout(renderTimer);renderTimer=null;dirty=false;cursor='0';source=next;records=new Map();participants=new Map();room=null;selected=null;flashes.clear();extent=1600;lastReceived=null;renderedCount=0;frozen=false;syncing=false;
+  lastSync=null;syncError='';streamState='Connecting…';text('#sync-now','Sync now');$('#sync-now').hidden=next!=='remote';text('#session-state','');text('#freeze','Freeze view');$('#source-banner').classList.toggle('simulation',next==='simulation');$('#session-controls').hidden=!['local','remote'].includes(next);
+  for(const c of Object.values(charts))c.empty('Waiting for measurements.');$('#mosaic').innerHTML='';$('#mosaic-empty').hidden=false;text('#participant-count','0');text('#mosaic-count','0');text('#selected-path-title','Movement path');text('#selected-path-note','');text('#boundary-note','');text('#attempt-count','0');text('#error-count','—');text('#last-update','Nothing received yet');text('#fit-caption','Waiting for enough successful trials to fit a line.');text('#coverage','');
 }
 function receive(newRows,animate=true){let added=0;for(const r of newRows){if(!r||!r.id||!r.participant_id||!Number.isFinite(r.acquisition_ms))continue;if(records.has(id(r)))continue;
-  records.set(id(r),r);added++;const old=participants.get(r.participant_id)||{id:r.participant_id,label:r.participant_label||'Participant',device:r.device,count:0};old.count=(old.count||0)+1;old.latest=r;participants.set(r.participant_id,old);if(animate)flashes.add(r.participant_id);
+  records.set(id(r),r);added++;const old=participants.get(r.participant_id)||{id:r.participant_id,label:r.participant_label||'Participant',device:r.device,count:0};old.count=(old.count||0)+1;if(!old.latest||r.created_at>=old.latest.created_at)old.latest=r;participants.set(r.participant_id,old);if(animate)flashes.add(r.participant_id);
 }if(added){lastReceived=Date.now();if(frozen)text('#freeze',`Resume · ${records.size-renderedCount} new`);else schedule();}}
 function receivePerson(p){participants.set(p.id,{...participants.get(p.id),...p,count:participants.get(p.id)?.count||0});if(!frozen)schedule();}
 function labelSource(){text('#source-label',source==='simulation'?'Simulation':source==='local'?'Local rehearsal':source==='import'?'Imported session':'Live classroom');text('#source-detail',source==='simulation'?'Preview data is isolated from real sessions.':source==='local'?'Open the participant link in another tab of this browser profile.':source==='import'?'This view is not connected to a classroom.':'New measurements appear as the class works.');text('#room-title',room?.title||'');}
@@ -38,12 +41,14 @@ function acceptRoom(next){
   room=next;setupRoomControls();schedule();
 }
 function setupRoomControls(){
+  const state=sessionState(room);text('#session-state',`${state.label} · ${state.detail}`);
+  if(room){const o=[...$('#room-list').options].find(o=>o.value===room.id);if(o){o.textContent=sessionLabel(room);o.dataset.room=JSON.stringify(room);}}
   text('#room-title',room?.title||'');const link=new URL('./',location.href);if(source==='local')link.searchParams.set('local','1');$('#participant-address').href=link.href;$('#participant-address').textContent=link.href;
   $$('#session-controls [data-phase]').forEach(b=>b.classList.toggle('active',b.dataset.phase===room?.phase));
-  $('#end-room').disabled=!room||room.status!=='open';$('#delete-room').disabled=!room;$('#reset-data').disabled=!room;$('#room-list').closest('div').hidden=source==='local';$('#capacity').closest('label').hidden=source==='local';
+  $('#end-room').disabled=!state.open;$('#delete-room').disabled=!room;$('#reset-data').disabled=!room;$('#room-list').closest('div').hidden=source==='local';$('#capacity').closest('label').hidden=source==='local';
 }
 function schedule(){dirty=true;if(renderTimer||rendering||frozen||animating)return;renderTimer=setTimeout(async()=>{renderTimer=null;if(!dirty||frozen)return;dirty=false;rendering=true;try{await render();}catch(e){toast('Chart update failed: '+e.message,true);console.error(e);}finally{rendering=false;if(dirty)schedule();}},450);}
-function filterRows(){const task=$('#task-filter').value,noise=$('#noise-filter').value,device=$('#device-filter').value;return firstAttempts([...records.values()],{task,perturbation:noise}).filter(r=>(device==='all'||r.device===device)&&Number.isFinite(r.index_difficulty)&&(task!=='interfaces'||/^buttons-/.test(r.variant)));}
+function filterRows(){const task=$('#task-filter').value,noise=$('#noise-filter').value,device=$('#device-filter').value;return firstAttempts([...records.values()],{...(task==='all'?{}:{task}),perturbation:noise}).filter(r=>(device==='all'||r.device===device)&&Number.isFinite(r.index_difficulty)&&(r.task!=='interfaces'||/^buttons-|^(wide|tall)$/.test(r.variant)));}
 async function render(){
   if(frozen)return;const generation=sourceGeneration;const allRows=[...records.values()],allFirst=firstAttempts(allRows,{perturbation:'all'}),rs=filterRows();
   text('#participant-count',participants.size);text('#mosaic-count',participants.size);text('#attempt-count',records.size.toLocaleString());text('#error-count',allFirst.length?`${(100*allFirst.filter(r=>!r.hit).length/allFirst.length).toFixed(1)}%`:'—');
@@ -53,10 +58,10 @@ async function render(){
     const means=conditionMeans(rs.filter(r=>r.hit)),field=axis?'index_difficulty':'distance',trend=trendlines(rs,field);
     const max=Math.max(...rs.map(r=>r.acquisition_ms));const nextExtent=Math.max(extent,Math.ceil(max/500)*500);
     const fitData=trend.lines;
-    const chartRows=displaySample(rs).map(r=>({...r,outcome:r.hit?'Hit':'Miss'})),data={trials:chartRows,means,fit:fitData};
-    if(!charts.hero.result||nextExtent!==extent){extent=nextExtent;await charts.hero.set(heroSpec({extent,mix:axis}),data);charts.hero.result?.view.addSignalListener('selectedPerson',(_,v)=>{const ids=v?.participant_id;if(Array.isArray(ids)&&ids[0]){selected=ids[0];renderSelectedPath();}});}else await charts.hero.update(data);
+    const chartRows=displaySample(rs).map(r=>({...r,student_color:studentColor(r.participant_id),outcome:r.hit?'Hit':'Miss'})),data={trials:chartRows,means:means.map(r=>({...r,student_color:studentColor(r.participant_id)})),fit:fitData};
+    if(!charts.hero.result||nextExtent!==extent){extent=nextExtent;await charts.hero.set(heroSpec({extent,mix:axis}),data);charts.hero.result?.view.addSignalListener('selectedPerson',(_,v)=>{const ids=v?.participant_id;selected=Array.isArray(ids)?ids[0]||null:null;focusStudent();renderSelectedPath();renderMosaic();});}else await charts.hero.update(data);
     if(generation!==sourceGeneration)return;
-    renderedRows=rs;text('#fit-caption',trendCaption(trend,field)+' · pooled classroom observations');
+    focusStudent();renderedRows=rs;text('#fit-caption',trendCaption(trend,field)+' · pooled classroom observations');
     text('#coverage',`${rs.length} first attempts in this view · ${new Set(rs.map(r=>r.participant_id)).size} participants · ${new Set(rs.map(r=>r.condition)).size} conditions${rs.length>5000?' · faint marks show a deterministic 5,000-observation sample; calculations use all rows':''}`);
   }else{charts.hero.empty('The selected task and condition have no observations yet.');text('#fit-caption','Waiting for enough successful trials to fit a line.');text('#coverage','');}
   const filteredAll=allRows.filter(r=>$('#device-filter').value==='all'||r.device===$('#device-filter').value);
@@ -65,19 +70,20 @@ async function render(){
   if(generation!==sourceGeneration)return;
   await renderSelectedPath();renderedCount=records.size;
 }
+function focusStudent(){const view=charts.hero.result?.view;if(view)view.signal('focusStudent',selected||'').runAsync().catch(console.error);}
 function renderMosaic(){
   const people=frozen&&frozenPeople?frozenPeople:participants;const grid=$('#mosaic');$('#mosaic-empty').hidden=people.size>0;
   // Stable insertion order; never re-sort people by speed or arrival frequency.
   for(const p of people.values()){
     let tile=[...grid.children].find(e=>e.dataset.person===p.id);
-    if(!tile){tile=document.createElement('button');tile.className='person';tile.dataset.person=p.id;tile.setAttribute('aria-label',`Inspect ${p.label}`);const name=document.createElement('span');name.textContent=p.label;const canvas=document.createElement('canvas');canvas.width=150;canvas.height=80;const count=document.createElement('span');count.className='person-count';tile.append(name,canvas,count);tile.onclick=()=>{selected=p.id;renderSelectedPath();renderMosaic();};grid.append(tile);}
-    tile.classList.toggle('selected',selected===p.id);tile.querySelector('.person-count').textContent=String(p.count||0);
+    if(!tile){tile=document.createElement('button');tile.className='person';tile.dataset.person=p.id;tile.setAttribute('aria-label',`Inspect ${p.label}`);const name=document.createElement('span');name.textContent=p.label;const canvas=document.createElement('canvas');canvas.width=150;canvas.height=80;const count=document.createElement('span');count.className='person-count';tile.append(name,canvas,count);tile.onclick=()=>{selected=selected===p.id?null:p.id;focusStudent();renderSelectedPath();renderMosaic();};grid.append(tile);}
+    tile.style.borderLeft='4px solid '+studentColor(p.id);tile.classList.toggle('selected',selected===p.id);tile.querySelector('.person-count').textContent=String(p.count||0);
     if(flashes.has(p.id)){tile.classList.remove('flash');void tile.offsetWidth;tile.classList.add('flash');}
     drawMini(tile.querySelector('canvas'),p.latest);
   }flashes.clear();
 }
 function drawMini(canvas,r){const c=canvas.getContext('2d');c.clearRect(0,0,150,80);c.strokeStyle='#cbd1cb';c.lineWidth=1;c.beginPath();c.moveTo(12,40);c.lineTo(138,40);c.stroke();if(!r?.path?.length)return;
-  const ps=pathRows([r]),d=Math.max(r.distance,1);c.strokeStyle=r.hit?'#387d87':'#b65329';c.lineWidth=2;c.beginPath();ps.forEach((p,i)=>{const x=12+p.along*118,y=40+Math.max(-30,Math.min(30,p.across/d*100));i?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();c.fillStyle='#387d87';c.beginPath();c.arc(130,40,3,0,2*Math.PI);c.fill();}
+  const ps=pathRows([r]),d=Math.max(r.distance,1);c.strokeStyle=studentColor(r.participant_id);c.lineWidth=2;c.beginPath();ps.forEach((p,i)=>{const x=12+p.along*118,y=40+Math.max(-30,Math.min(30,p.across/d*100));i?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();c.fillStyle='#387d87';c.beginPath();c.arc(130,40,3,0,2*Math.PI);c.fill();}
 async function renderSelectedPath(){
   const people=frozen&&frozenPeople?frozenPeople:participants;let p=people.get(selected);if(!p?.latest)p=[...people.values()].filter(p=>p.latest).at(-1);
   if(!p?.latest){charts.path.empty('Click a participant tile to inspect a movement.');return;}
@@ -85,26 +91,39 @@ async function renderSelectedPath(){
   if(charts.path.result)await charts.path.update({paths});else await charts.path.set(pathSpec(),{paths});
   text('#selected-path-note',`${TASK_LABELS[p.latest.task]} · ${Math.round(p.latest.acquisition_ms)} ms · ${p.latest.hit?'hit':'miss'} · attempt ${p.latest.attempt}`);
 }
+function showConnection(){
+  if(source!=='remote')return;
+  const checked=lastSync?' · checked '+new Date(lastSync).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}):'';
+  text('#connection-state',syncError?'Sync delayed · '+syncError+' · retrying':streamState+checked);
+}
+$('#sync-now').onclick=async()=>{text('#sync-now','Checking…');try{await syncRemote();}finally{text('#sync-now','Sync now');}};
+window.addEventListener('online',()=>{syncRemote();stream?.reconnectNow();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){syncRemote();stream?.reconnectNow();}});
 async function syncRemote(){
-  if(syncing||!room||source!=='remote')return;syncing=true;const roomId=room.id;
-  try{let more=true,pages=0;while(more&&pages++<100){const result=await auth.call('snapshot',{room_id:roomId,after:cursor,limit:500});if(room?.id!==roomId||source!=='remote')return;
+  if(syncing||!room||source!=='remote')return;syncing=true;const roomId=room.id,run=connectionRun;
+  try{let more=true,pages=0;while(more&&pages++<100){const result=await auth.call('snapshot',{room_id:roomId,after:cursor,limit:500});if(run!==connectionRun||room?.id!==roomId||source!=='remote')return;
       if(result.room&&(result.room.data_revision||0)<(room.data_revision||0)){more=true;continue;}
       if(result.room&&(result.room.data_revision||0)!==(room.data_revision||0)){acceptRoom(result.room);more=true;continue;}
       for(const p of result.participants||[])receivePerson(p);receive(result.trials||[],cursor!=='0');cursor=result.cursor||cursor;more=!!result.has_more;if(result.room){room=result.room;setupRoomControls();}}
-  }catch(e){text('#connection-state',`Sync: ${e.message}`);}finally{syncing=false;}
+    lastSync=Date.now();syncError='';showConnection();
+  }catch(e){if(run===connectionRun){syncError=e.message;showConnection();}}finally{if(run===connectionRun)syncing=false;}
 }
 async function attachRemote(next){
-  reset('remote');room=next;labelSource();setupRoomControls();save('selected-room',room.id);
-  stream=new RoomStream(auth,room.id,(event,payload)=>{if(event==='trials')receive(payload.rows||[]);else if(event==='participant')receivePerson(payload);else if(event==='room'){acceptRoom({...room,...payload});syncRemote();}else if(event==='connected')syncRemote();},s=>text('#connection-state',s));
-  await syncRemote();poll=setInterval(syncRemote,CONFIG.instructorPollMs);schedule();
+  reset('remote');const run=connectionRun;room=next;$('#room-list').value=room.id;labelSource();setupRoomControls();save('selected-room',room.id);
+  stream=new RoomStream(auth,room.id,(event,payload)=>{if(run!==connectionRun)return;if(event==='trials'){receive(payload.rows||[]);}else if(event==='participant')receivePerson(payload);else if(event==='room'){acceptRoom({...room,...payload});syncRemote();}else if(event==='connected')syncRemote();},s=>{if(run!==connectionRun)return;streamState=s;showConnection();});
+  await syncRemote();if(run!==connectionRun)return;poll=setInterval(syncRemote,CONFIG.instructorPollMs);schedule();
 }
-async function loadCloud(){
-  const result=await auth.call('list',{slug:CONFIG.classroomSlug});$('#logout').hidden=false;$('#room-list').innerHTML='<option value="">Choose a session</option>';
-  for(const r of result.rooms){const o=document.createElement('option');o.value=r.id;o.textContent=`${r.title} · ${r.status} · ${new Date(r.created_at).toLocaleDateString()}`;o.dataset.room=JSON.stringify(r);$('#room-list').append(o);}
-  const preferred=result.rooms.find(r=>r.id===saved('selected-room',null))||result.rooms[0];
+async function loadCloud(preferredId=saved('selected-room',null)){
+  const run=connectionRun,result=await auth.call('list',{slug:CONFIG.classroomSlug});if(run!==connectionRun)return;$('#logout').hidden=false;$('#room-list').innerHTML='<option value="">Choose a session</option>';
+  for(const r of result.rooms){const o=document.createElement('option');o.value=r.id;o.textContent=sessionLabel(r);o.dataset.room=JSON.stringify(r);$('#room-list').append(o);}
+  const preferred=result.rooms.find(r=>r.id===preferredId)||result.rooms[0];
   if(preferred){$('#room-list').value=preferred.id;await attachRemote(preferred);}else{reset('remote');labelSource();setupRoomControls();$('#session-controls').open=true;text('#connection-state','Signed in · open a session');}
 }
-$('#local-mode').onclick=async()=>{reset('local');room=localRoom();if(!room||room.status!=='open')room=createLocalRoom();labelSource();setupRoomControls();$('#session-controls').open=true;text('#connection-state','Local · this browser only');const snap=await localSnapshot(room.id);for(const p of snap.participants)receivePerson(p);receive(snap.trials,false);poll=setInterval(async()=>{if(!room||source!=='local')return;acceptRoom(localRoom());const s=await localSnapshot(room.id);for(const p of s.participants)receivePerson(p);receive(s.trials,false);},1500);schedule();};
+$('#local-mode').onclick=async()=>{
+  reset('local');const run=connectionRun;room=localRoom();if(!room||room.status==='deleted')room=createLocalRoom();labelSource();setupRoomControls();$('#session-controls').open=true;text('#connection-state','Local · this browser only');
+  async function syncLocal(){if(run!==connectionRun)return;acceptRoom(localRoom());const snap=await localSnapshot(room.id);if(run!==connectionRun)return;for(const p of snap.participants)receivePerson(p);receive(snap.trials,false);}
+  await syncLocal();if(run!==connectionRun)return;poll=setInterval(syncLocal,1500);schedule();
+};
 if(bc)bc.onmessage=e=>{const m=e.data;if(source!=='local'||m.room_id!==room?.id)return;if(m.type==='trials')receive(m.rows);if(m.type==='participant')receivePerson(m.participant);if(m.type==='room')acceptRoom(m.room);};
 $('#simulate-mode').onclick=()=>{
   reset('simulation');labelSource();text('#connection-state','Preview · synthetic data only');const pool=simulationRows();receive(pool.splice(0,720),false);
@@ -118,8 +137,8 @@ $('#cloud-mode').onclick=async()=>{
 $('#login-form').onsubmit=async e=>{e.preventDefault();$('#login-button').disabled=true;try{await auth.login($('#email').value,$('#password').value);$('#password').value='';await loadCloud();$('#auth-dialog').close();}catch(e){toast(e.message,true);}finally{$('#login-button').disabled=false;}};
 $('#logout').onclick=async()=>{stream?.close();clearInterval(poll);await auth.logout();$('#logout').hidden=true;reset(null);labelSource();text('#source-label','Signed out.');text('#source-detail','Local copies remain in this page only until it is closed.');text('#connection-state','Signed out');};
 $('#create-room').onclick=async()=>{
-  if(room?.status==='open'&&!confirm('Open a new session? The current session stops admitting students; its saved data is retained.'))return;
-  try{if(source==='local'){updateLocalRoom({status:'closed'});createLocalRoom($('#new-title').value);await $('#local-mode').onclick();}else{const result=await auth.call('create',{slug:CONFIG.classroomSlug,title:$('#new-title').value,capacity:Number($('#capacity').value)});await loadCloud();await attachRemote(result.room);}}catch(e){toast(e.message,true);}
+  if(sessionState(room).open&&!confirm('Open a new session? The current session stops admitting students; its saved data is retained.'))return;
+  try{if(source==='local'){updateLocalRoom({status:'closed'});createLocalRoom($('#new-title').value);await $('#local-mode').onclick();}else{const result=await auth.call('create',{slug:CONFIG.classroomSlug,title:$('#new-title').value,capacity:Number($('#capacity').value)});await loadCloud(result.room.id);}}catch(e){toast(e.message,true);}
 };
 $('#end-room').onclick=async()=>{if(!room||!confirm('End this session? New joins stop now. Existing queued uploads are accepted for ten more minutes.'))return;try{room=source==='local'?updateLocalRoom({status:'closed'}):(await auth.call('close',{room_id:room.id})).room;setupRoomControls();toast('Session ended. Buffered uploads have a ten-minute grace period.');}catch(e){toast(e.message,true);}};
 $('#reset-data').onclick=async()=>{
@@ -138,9 +157,9 @@ $('#delete-room').onclick=async()=>{if(!room||prompt('This permanently deletes t
 $('#load-room').onclick=async()=>{const o=$('#room-list').selectedOptions[0];if(o?.dataset.room)await attachRemote(JSON.parse(o.dataset.room));};
 $('#copy-address').onclick=()=>copy($('#participant-address').href);
 $$('[data-phase]').forEach(b=>b.onclick=async()=>{if(!room)return;try{room=source==='local'?updateLocalRoom({phase:b.dataset.phase}):(await auth.call('phase',{room_id:room.id,phase:b.dataset.phase})).room;setupRoomControls();toast('Stage guidance updated. Students switch with their own click.');}catch(e){toast(e.message,true);}});
-$('#freeze').onclick=()=>{frozen=!frozen;frozenPeople=frozen?structuredClone(participants):null;frozenRows=frozen?renderedRows:null;for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).disabled=frozen;text('#freeze',frozen?'Resume live view':'Freeze view');if(!frozen)schedule();};
+$('#freeze').onclick=()=>{frozen=!frozen;frozenPeople=frozen?structuredClone(participants):null;frozenRows=frozen?renderedRows:null;for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).disabled=frozen;text('#freeze',frozen?'Resume display (collecting)':'Freeze view');if(!frozen)schedule();};
 $('#present').onclick=async()=>{const on=document.body.classList.toggle('presenting');text('#present',on?'Exit presentation':'Present ⛶');try{if(on&&!document.fullscreenElement)await document.documentElement.requestFullscreen();else if(!on&&document.fullscreenElement)await document.exitFullscreen();}catch{/* The presentation layout works without browser fullscreen. */}setTimeout(()=>schedule(),100);};
-for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).onchange=()=>{selected=null;schedule();};
+for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).onchange=()=>{selected=null;focusStudent();schedule();};
 async function axisTo(next){if(animating||axis===next)return;const previous=axis;axis=next;animating=true;$('#axis-distance').classList.toggle('active',!axis);$('#axis-difficulty').classList.toggle('active',!!axis);text('#axis-caption','Re-encoding the same observations…');
   // Remove the fitted line during the transition; it belongs to a specific x variable.
   if(charts.hero.result){await charts.hero.update({fit:[]});await animateMix(charts.hero,previous,next);}animating=false;text('#axis-caption',axis?'Index of difficulty · log₂(1 + D/W), in bits':'Distance to target center · CSS pixels');

@@ -287,4 +287,6 @@ There is a 24-hour room lifetime, configured room capacity, 4,000-attempt partic
 - [Realtime protocol](https://supabase.com/docs/guides/realtime/protocol)
 - [Realtime limits](https://supabase.com/docs/guides/realtime/limits) and [pricing](https://supabase.com/docs/guides/realtime/pricing)
 
-Package documentation checked September 25, 2026. Dashboard labels and service limits may change. No cloud resources were provisioned or hosted account configuration tested while producing this package.
+Package documentation checked September 25, 2026. Dashboard labels and service limits may change. Check your project configuration against the steps above when deploying to a new Supabase project.
+
+The session list updates status when a session ends; Ended/Expired sessions remain selectable for reviewing saved results. The status line distinguishes classroom admission from the live connection. A last-checked timestamp and **Sync now** show whether database reconciliation is working. Returning online or to the tab triggers recovery; Freeze affects rendering only.

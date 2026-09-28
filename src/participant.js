@@ -11,12 +11,12 @@ import {configured,api,localRoom,joinRoom,Outbox} from './network.js';
 common();
 const person=identity(),localLabel='P-'+person.slice(0,6).toUpperCase();
 let rows=[],sets=[],currentSet=null,task='horizontal',progress=saved('progress',{}),membership=null,joinCandidate=null;
-let refreshTimer=null,saveFailed=false,resultExtent={horizontal:1600,circles:1600};
+let refreshTimer=null,saveFailed=false,resultExtent=1600;
 try{rows=await all('trials');sets=await all('sets');sets.sort((a,b)=>a.created_at.localeCompare(b.created_at));}catch(e){saveFailed=true;toast('Persistent storage is unavailable. Export your measurements before closing this page.',true);}
-if(!saved('horizontal-protocol-v5',false)){progress.horizontal=0;save('progress',progress);save('horizontal-protocol-v5',true);}
-if(!saved('circles-protocol-v2',false)){progress.circles=0;save('progress',progress);save('circles-protocol-v2',true);}
-if(!saved('interfaces-protocol-v5',false)){progress.interfaces=0;save('progress',progress);save('interfaces-protocol-v5',true);}
-const charts={paths:new Chart('#path-chart'),speed:new Chart('#speed-chart'),endpoints:new Chart('#endpoint-chart'),horizontal:new Chart('#horizontal-results'),circles:new Chart('#circle-results'),interfaceControls:new Chart('#interface-control-results'),interfaces:new Chart('#interface-results')};
+if(!saved('horizontal-protocol-v6',false)){progress.horizontal=0;save('progress',progress);save('horizontal-protocol-v6',true);}
+if(!saved('circles-protocol-v3',false)){progress.circles=0;save('progress',progress);save('circles-protocol-v3',true);}
+if(!saved('interfaces-protocol-v6',false)){progress.interfaces=0;save('progress',progress);save('interfaces-protocol-v6',true);}
+const charts={paths:new Chart('#path-chart'),speed:new Chart('#speed-chart'),endpoints:new Chart('#endpoint-chart'),combined:new Chart('#combined-results'),interfaces:new Chart('#interface-results')};
 const outbox=new Outbox(({pending,message,blocked})=>{
   text('#saved-count',`${rows.length} attempts saved${saveFailed?' in memory only':''}${pending?` · ${pending} awaiting upload`:''}`);
   $('#retry-sync').hidden=!pending||(!message&&!blocked);
@@ -43,8 +43,8 @@ function selectedPlan(){
     else if(task==='interfaces')delete p.positions;
   }else if(task==='horizontal'){
     const completed=sets.filter(s=>s.task==='horizontal'&&s.state==='complete'&&s.plan.width===p.width&&s.plan.block!==undefined&&s.plan.protocolVersion===VERSION).length;
-    p.layoutSeed=hash(`${person}-horizontal-${p.width}-${Math.floor(completed/2)}`);
-    p.positions=horizontalSequence(p.width,p.layoutSeed).slice(p.block*9,p.block*9+10);
+    p.layoutSeed=hash(`${person}-horizontal-${p.width}-${Math.floor(completed/3)}`);
+    p.positions=horizontalSequence(p.width,p.layoutSeed).slice(p.block*16,p.block*16+17);
   }else if(task==='interfaces'){
     const pair=p.variant.startsWith('menu')?'menu':p.variant.startsWith('corner')?'corner':p.variant;
     const completed=sets.filter(s=>s.task==='interfaces'&&s.state==='complete'&&s.plan.protocolVersion===VERSION&&
@@ -142,17 +142,13 @@ async function renderMini(){
 }
 async function renderResults(){
   const perturbation=$('#result-condition').value;
-  for(const t of ['horizontal','circles']){
-    const rs=firstAttempts(rows,{task:t,perturbation}),mapped=rs.map(r=>({...r,outcome:r.hit?'Hit':'Miss'}));
-    if(!rs.length){charts[t].empty(`Complete ${t==='horizontal'?'a horizontal':'a circular'} set to see your results.`);text('#'+t+'-summary','');continue;}
-    resultExtent[t]=Math.max(resultExtent[t],Math.ceil(Math.max(...rs.map(r=>r.acquisition_ms))/500)*500);
-    const trend=trendlines(rs);
-    await charts[t].set(scatterSpec({extent:resultExtent[t]}),{trials:mapped,fit:trend.lines});
-    text('#'+t+'-summary',`${rs.length} first attempts · ${rs.filter(r=>!r.hit).length} misses · ${trendCaption(trend)}`);
-  }
+  const rs=firstAttempts(rows,{perturbation}).filter(r=>Number.isFinite(r.index_difficulty)&&(r.task!=='interfaces'||/^buttons-|^(wide|tall)$/.test(r.variant)));
+  if(rs.length){
+    resultExtent=Math.max(resultExtent,Math.ceil(Math.max(...rs.map(r=>r.acquisition_ms))/500)*500);
+    const trend=trendlines(rs);await charts.combined.set(scatterSpec({height:340,extent:resultExtent}),{trials:rs,means:[],fit:trend.lines});
+    text('#combined-summary',`${rs.length} first attempts · ${rs.filter(r=>!r.hit).length} misses · ${trendCaption(trend)}`);
+  }else{charts.combined.empty('Complete some selections to compare stages here.');text('#combined-summary','');}
   const br=boundaryRows(rows,perturbation);
-  const ui=firstAttempts(rows,{task:'interfaces',perturbation}).filter(r=>[...BUTTON_SETS,'buttons-compact','buttons-standard'].includes(r.variant)).map(r=>({...r,outcome:r.hit?'Hit':'Miss'}));
-  if(ui.length){const trend=trendlines(ui);await charts.interfaceControls.set(scatterSpec({height:240,extent:Math.max(1600,Math.ceil(Math.max(...ui.map(r=>r.acquisition_ms))/500)*500)}),{trials:ui,fit:trend.lines});text('#interface-control-summary',`${ui.length} first attempts on varied buttons · ${ui.filter(r=>!r.hit).length} misses · ${trendCaption(trend)}`);}else{charts.interfaceControls.empty('Complete the button set to see its trials.');text('#interface-control-summary','');}
   if(br.length){await charts.interfaces.set(boundarySpec(),{boundaries:br});text('#interfaces-summary','Within each pair, the target sequence matches. The bold line averages complete participant pairs. Only control approaches are compared, and protocol versions stay separate. Current runs put free before edge, so practice may affect the difference.');}else charts.interfaces.empty('Complete a menu or window-edge set to start the matched comparison.');
 }
 function scheduleCharts(full=false){if(refreshTimer&&!full)return;clearTimeout(refreshTimer);refreshTimer=setTimeout(async()=>{refreshTimer=null;try{await renderMini();if(full||!arena.active())await renderResults();}catch(e){toast('Chart update failed: '+e.message,true);}},full?30:650);}

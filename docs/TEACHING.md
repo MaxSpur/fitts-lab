@@ -1,4 +1,4 @@
-# A 12-minute classroom run
+# Classroom run sheet
 
 The exercise is an aside in the introduction to HCI. Keep the measurement mechanics in the background. The central experience is to feel how distance, target geometry, and a hard edge change a click, then see the class's actions become data.
 
@@ -6,7 +6,7 @@ The exercise is an aside in the introduction to HCI. Keep the measurement mechan
 
 Open a new session on `classroom.html`, check a real participant connection, and have the permanent participant URL ready in the slides/chat. Present the instructor window. Guided horizontal, circular, and abstract-button sets default to the system cursor. The matched boundary sets use a captured cursor in Automatic mode; try them on the classroom machines before comparing times. Ask students to use one device throughout. They can select mouse or trackpad; choosing a category is optional and descriptive.
 
-The guided protocol contains 36 horizontal selections in four nine-selection sets, 24 circular selections in two sets, 24 selections in one varied-button set, and 32 selections across two free/edge pairs, plus one unscored starting click per set and any retries. Horizontal has six distance–width conditions with six trials each. A student can stop after a set or follow the teacher's next-stage recommendation. Completed data is retained.
+The guided protocol contains 96 selections in each stage (288 total): six sets of 16 for Horizontal and Circles, two sets of 24 ordinary buttons, and four sets of 12 free/edge selections. Each stage therefore has equal selection count, though task difficulty affects duration. Horizontal and Circular each have six conditions with 16 observations per condition. For a short lesson, use only part of the protocol and allow students to finish their current set. Budget additional practice time for a complete run.
 
 ## Run sheet
 
@@ -14,7 +14,7 @@ The guided protocol contains 36 horizontal selections in four nine-selection set
 |---|---|---|
 | 0:00–1:00 | Join through the common participant page. Start a set. | “Your label is on the projection. Every measured attempt adds to our dataset.” |
 | 1:00–3:00 | Short horizontal sets. Show tiles pulsing. | “What changed when the strip became narrow? Can a farther target still be easy?” |
-| 3:00–4:30 | Two circular sets, nearly opposite targets. | “The direction changes. A circle still offers the same diameter along a center-directed approach.” |
+| 3:00–4:30 | Sample circular sets at different distances and sizes. | “The direction changes. A circle still offers the same diameter along a center-directed approach.” |
 | 4:30–7:30 | Follow the varied-button sequence; then try the free menu before its edge-limited match. | “Which button sizes feel easier to acquire, and why?” |
 | 7:30–10:30 | Ask students to finish/review. Freeze the projection. Toggle distance → difficulty. | “These are the same clicks. We changed the horizontal variable by including target size.” |
 | 10:30–12:00 | Compare completed boundary pairs and connect to dataviz. | “What happens when someone must select a small map feature, a legend entry, or a slider handle?” |

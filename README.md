@@ -2,7 +2,7 @@
 
 Two static websites for a classroom introduction to human–computer interaction.
 
-- **`index.html` — participant.** Four short horizontal sets, two circular sets, one continuous varied-button set, and matched menu/window-edge comparisons. Horizontal has 36 timed selections; Circular and varied buttons each have 24. Interface sets begin with one unscored button, then continue from target to target. Ordinary targets use the system cursor by default; simulated hard edges use a captured cursor. The page includes live movement traces, descriptive trendlines, persistent browser history, and CSV/JSON exports.
+- **`index.html` — participant.** Each stage has 96 timed selections: six Horizontal sets, six Circular sets with three distances and two target sizes, and two varied-button sets followed by matched menu/window comparisons. Interface sets begin with one unscored button, then continue from target to target. Ordinary targets use the system cursor by default; simulated hard edges use a captured cursor. The page includes live movement traces, descriptive trendlines, persistent browser history, and CSV/JSON exports.
 - **`classroom.html` — instructor.** A live participant mosaic, incoming-data pulses, a distance↔difficulty transition, linked participant inspection, paired boundary comparisons, freeze/presentation modes, exports and snapshot imports.
 
 Both are complete static applications. The participant page works without a backend. Multi-computer classroom sharing requires the included Supabase schema and Edge Function to be deployed and configured; a hosted project is **not** included or pre-provisioned.
@@ -46,7 +46,7 @@ The only public configuration is `config.js`. Never put a secret key, database p
 | `supabase/functions/` | Backend handler and hosted entry point |
 | `examples/` | Minimal standalone Vega-Lite examples |
 
-**[TEACHING](docs/TEACHING.md)** has the 12-minute run sheet. **[METHODS](docs/METHODS.md)** defines exactly what is measured. **[DATA](docs/DATA.md)** documents the exports. **[NOTEBOOK](docs/NOTEBOOK.md)** shows how to reuse a chart in Observable. **[TESTING](docs/TESTING.md)** distinguishes completed checks from the deployment/Safari checks still required. **[SECURITY](docs/SECURITY.md)** describes the trust boundaries and classroom-scale limits.
+**[TEACHING](docs/TEACHING.md)** has the classroom run sheet. **[METHODS](docs/METHODS.md)** defines exactly what is measured. **[DATA](docs/DATA.md)** documents the exports. **[NOTEBOOK](docs/NOTEBOOK.md)** shows how to reuse a chart in Observable. **[TESTING](docs/TESTING.md)** distinguishes completed checks from the deployment/Safari checks still required. **[SECURITY](docs/SECURITY.md)** describes the trust boundaries and classroom-scale limits.
 
 ## Check and build
 
@@ -77,3 +77,5 @@ Original application code is MIT-licensed; see LICENSE. Third-party components r
 The classroom view provides compact task and device filters, participant paths, and descriptive trendlines. Freeze pauses the display while data collection continues.
 
 In the classroom’s **Session & participant link** controls, **Reset data…** clears classroom measurements after confirmation while keeping participants joined. Export any results you need first. Student-local copies remain, and queued uploads may arrive afterward.
+
+Results combine all stages using square/circle/diamond glyphs. The classroom assigns a color to each student; click a tile or point to highlight them. Session status distinguishes Open, Ended, and Expired; ended sessions retain results and briefly accept queued uploads. **Sync now** reconciles saved measurements immediately.

@@ -20,7 +20,7 @@ export const localRoom=()=>saved('local-room',null);
 export function createLocalRoom(title='Local rehearsal'){
   const room={id:crypto.randomUUID(),title,slug:'local',phase:'horizontal',status:'open',created_at:new Date().toISOString(),expires_at:new Date(Date.now()+86400000).toISOString(),accept_until:new Date(Date.now()+86400000).toISOString(),source:'local'};save('local-room',room);save('local-room:'+room.id,room);return room;
 }
-export function updateLocalRoom(patch){const room={...localRoom(),...patch};if(patch.status==='closed')room.accept_until=new Date(Math.min(Date.parse(room.expires_at),Date.now()+600000)).toISOString();save('local-room',room);save('local-room:'+room.id,room);const c=channel();c?.postMessage({type:'room',room});c?.close();return room;}
+export function updateLocalRoom(patch){const room={...localRoom(),...patch};if(patch.status==='closed')room.accept_until=new Date(Math.min(Date.parse(room.expires_at),Date.now()+600000)).toISOString();save('local-room',room);save('local-room:'+room.id,room);const c=channel();c?.postMessage({type:'room',room_id:room.id,room});c?.close();return room;}
 export async function localSnapshot(roomId){const a=await all('localClass');return{participants:a.filter(r=>r.kind==='participant'&&r.room_id===roomId).map(r=>r.data),trials:a.filter(r=>r.kind==='trial'&&r.room_id===roomId).map(r=>r.data)};}
 export function randomToken(){return [...crypto.getRandomValues(new Uint8Array(32))].map(b=>b.toString(16).padStart(2,'0')).join('');}
 export async function joinRoom(room,device,source='remote'){
@@ -36,8 +36,8 @@ export async function joinRoom(room,device,source='remote'){
 }
 /** Persistent, idempotent outbox. Only measurements recorded AFTER joining are queued. */
 export class Outbox {
-  constructor(onStatus=()=>{}){this.onStatus=onStatus;this.busy=false;this.wait=0;this.failures=0;this.blocked=new Set();this.bc=channel();this.timer=setInterval(()=>this.flush().catch(e=>{if(!this.storageErrorReported){this.storageErrorReported=true;this.onStatus({pending:0,message:'Browser storage is unavailable: '+e.message,blocked:true});}}),CONFIG.uploadIntervalMs);window.addEventListener('online',()=>{this.wait=0;this.flush();});}
-  async enqueue(trial,credential){await put('outbox',{id:trial.id,trial,credential});this.status();}
+  constructor(onStatus=()=>{}){this.onStatus=onStatus;this.busy=false;this.wait=0;this.failures=0;this.blocked=new Set();this.bc=channel();this.timer=setInterval(()=>this.flush().catch(e=>{if(!this.storageErrorReported){this.storageErrorReported=true;this.onStatus({pending:0,message:'Browser storage is unavailable: '+e.message,blocked:true});}}),CONFIG.uploadIntervalMs);window.addEventListener('online',()=>{this.wait=0;this.flush();});document.addEventListener('visibilitychange',()=>{if(!document.hidden){this.wait=0;this.flush();}});}
+  async enqueue(trial,credential){await put('outbox',{id:trial.id,trial,credential});this.status();if(!this.kickTimer)this.kickTimer=setTimeout(()=>{this.kickTimer=null;this.flush();},350);}
   async status(message){const rows=await all('outbox');this.onStatus({pending:rows.length,message,blocked:this.blocked.size>0});}
   async flush(){
     if(this.busy||Date.now()<this.wait||!navigator.onLine)return;this.busy=true;let activeCredential=null;
@@ -55,7 +55,7 @@ export class Outbox {
       }else{
         const result=await api('ingest',{participant_id:credential.participant_id,token:credential.token,rows});accepted=result.accepted||[];
       }
-      await removeMany('outbox',accepted);this.failures=0;this.wait=0;await this.status();
+      await removeMany('outbox',accepted);this.failures=0;this.wait=Date.now()+300;await this.status();
     }catch(e){this.failures++;this.wait=Date.now()+Math.min(30000,1000*2**this.failures)+Math.random()*500;
       if([400,401,403,409,410,413].includes(e.status)){if(activeCredential)this.blocked.add(activeCredential.room_id);}
       await this.status(e.message);
@@ -82,7 +82,7 @@ export class RoomStream {
   constructor(auth,roomId,onEvent,onState){this.auth=auth;this.roomId=roomId;this.onEvent=onEvent;this.onState=onState;this.ref=0;this.retry=0;this.closed=false;this.connect();}
   send(event,payload={},topic=this.topic){if(this.ws?.readyState!==WebSocket.OPEN)return;const ref=String(++this.ref);this.ws.send(JSON.stringify({topic,event,payload,ref,join_ref:topic===this.topic?this.joinRef:null}));return ref;}
   async connect(){
-    if(this.closed)return;this.onState('Connecting live stream…');
+    if(this.closed||this.connecting)return;this.connecting=true;this.onState('Connecting live stream…');
     try{
       const token=await this.auth.access();if(this.closed)return;
       this.topic=`realtime:classroom:${this.roomId}`;this.ws=new WebSocket(`${CONFIG.supabaseUrl.replace(/^http/,'ws')}/realtime/v1/websocket?apikey=${encodeURIComponent(CONFIG.publishableKey)}&vsn=1.0.0`);
@@ -96,7 +96,7 @@ export class RoomStream {
       };
       this.ws.onerror=()=>this.onState('Connection interrupted · polling continues');
       this.ws.onclose=()=>{clearInterval(this.heartbeat);clearTimeout(this.joinTimer);if(!this.closed){this.onState('Reconnecting · polling continues');this.schedule();}};
-    }catch{this.onState('Live stream unavailable · polling continues');this.schedule();}
+    }catch{if(!this.closed){this.onState('Live stream unavailable · polling continues');this.schedule();}}finally{this.connecting=false;}
   }
   startHeartbeat(){clearInterval(this.heartbeat);this.awaitingHeartbeat=false;this.heartbeat=setInterval(async()=>{
     if(this.awaitingHeartbeat){this.ws?.close();return;}
@@ -104,5 +104,6 @@ export class RoomStream {
     try{this.send('access_token',{access_token:await this.auth.access()});}catch{this.ws?.close();}
   },20000);}
   schedule(){clearTimeout(this.reconnect);this.reconnect=setTimeout(()=>this.connect(),Math.min(30000,1000*2**this.retry++)+Math.random()*500);}
+  reconnectNow(){if(this.closed)return;if(this.ws?.readyState===WebSocket.OPEN)return;clearTimeout(this.reconnect);if(this.ws?.readyState===WebSocket.CONNECTING)return;this.connect();}
   close(){this.closed=true;clearTimeout(this.reconnect);clearTimeout(this.joinTimer);clearInterval(this.heartbeat);this.ws?.close();}
 }
