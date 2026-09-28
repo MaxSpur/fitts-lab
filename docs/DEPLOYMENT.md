@@ -4,6 +4,16 @@ This guide covers local use, a GitHub Pages website, and a Supabase-backed live 
 
 The commands below work in Fish on macOS. Replace uppercase placeholders literally. Run project commands inside the extracted `fitts-lab` directory. Keep that full source directory: the smaller ready-to-host archive contains the frontend only.
 
+## Current hosted instance
+
+- Participant: https://www.maximspur.com/fitts-lab/
+- Instructor: https://www.maximspur.com/fitts-lab/classroom.html
+- Source and deployment: https://github.com/MaxSpur/fitts-lab
+
+GitHub Actions publishes `main` to Pages under the existing `www.maximspur.com` domain. The backend accepts HTTPS origins `maximspur.com` and `www.maximspur.com`; local rehearsal remains available without Supabase. Local hosted-backend testing requires explicitly adding its origin.
+
+The initial database schema was applied through the Supabase Management API (the SQL Editor equivalent), because the CLI stalled during login-role initialization. Before using `supabase db push` on this instance, reconcile migration `202609250001` as already applied; do not rerun the initial SQL. Public frontend configuration is in `config.js`.
+
 ## 1. Check the websites locally first
 
 Open the folder in VS Code. With Node 20 or newer installed:
@@ -248,6 +258,7 @@ There is a 24-hour room lifetime, configured room capacity, 4,000-attempt partic
 | CORS / Origin not allowed | `ALLOWED_ORIGINS` needs the exact scheme, host, and port; no repository path or trailing slash. |
 | 401 before the handler runs | Ensure `classroom-api` is deployed with `verify_jwt=false`; the app performs custom participant authorization internally. |
 | “Backend environment is not configured” | Verify project URL/runtime secrets and nonempty `ALLOWED_ORIGINS`; optionally set `SERVER_SECRET_KEY` in the server secrets dashboard. |
+| SQL reports `relation "public.instructors" does not exist` | Step 4 has not completed in the selected project. Apply the **entire** migration file before running the step 5 allowlist statement. |
 | Instructor login succeeds but access fails | Confirm the correct Auth UUID is in `public.instructors`; check that the selected room belongs to that account. |
 | Database operation failed | Confirm the whole migration was applied once to this project; inspect Edge Function and Postgres logs. Do not loosen RLS as a workaround. |
 | Participant tile appears but no measurements | Look at the participant queue status and function logs; verify validation errors, room expiry, and its credential. |

@@ -7,6 +7,27 @@ for sharing across computers.</p>
 placeholders literally. Run project commands inside the extracted
 <code>fitts-lab</code> directory. Keep that full source directory: the
 smaller ready-to-host archive contains the frontend only.</p>
+<h2 id="current-hosted-instance">Current hosted instance</h2>
+<ul>
+<li>Participant: <a
+href="https://www.maximspur.com/fitts-lab/">https://www.maximspur.com/fitts-lab/</a></li>
+<li>Instructor: <a
+href="https://www.maximspur.com/fitts-lab/classroom.html">https://www.maximspur.com/fitts-lab/classroom.html</a></li>
+<li>Source and deployment: <a
+href="https://github.com/MaxSpur/fitts-lab">https://github.com/MaxSpur/fitts-lab</a></li>
+</ul>
+<p>GitHub Actions publishes <code>main</code> to Pages under the
+existing <code>www.maximspur.com</code> domain. The backend accepts
+HTTPS origins <code>maximspur.com</code> and
+<code>www.maximspur.com</code>; local rehearsal remains available
+without Supabase. Local hosted-backend testing requires explicitly
+adding its origin.</p>
+<p>The initial database schema was applied through the Supabase
+Management API (the SQL Editor equivalent), because the CLI stalled
+during login-role initialization. Before using
+<code>supabase db push</code> on this instance, reconcile migration
+<code>202609250001</code> as already applied; do not rerun the initial
+SQL. Public frontend configuration is in <code>config.js</code>.</p>
 <h2 id="1-check-the-websites-locally-first">1. Check the websites
 locally first</h2>
 <p>Open the folder in VS Code. With Node 20 or newer installed:</p>
@@ -374,6 +395,13 @@ authorization internally.</td>
 <td>Verify project URL/runtime secrets and nonempty
 <code>ALLOWED_ORIGINS</code>; optionally set
 <code>SERVER_SECRET_KEY</code> in the server secrets dashboard.</td>
+</tr>
+<tr>
+<td>SQL reports
+<code>relation "public.instructors" does not exist</code></td>
+<td>Step 4 has not completed in the selected project. Apply the
+<strong>entire</strong> migration file before running the step 5
+allowlist statement.</td>
 </tr>
 <tr>
 <td>Instructor login succeeds but access fails</td>
