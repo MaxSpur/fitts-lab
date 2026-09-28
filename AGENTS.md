@@ -23,3 +23,5 @@ Trendlines use `src/analysis.js` in both pages: successful first attempts, suffi
 Classroom data reset uses `reset_fitts_room_data` and `rooms.data_revision`; update both the RPC migration and instructor synchronization when changing reset behavior. Reset preserves memberships; new/in-flight uploads are allowed after it.
 
 `src/session.js` owns admission labels (Open/Ended/Expired). Classroom source changes must clear `renderTimer` as well as its timeout; connection-run guards discard stale snapshots. Combined charts encode stage by shape and participant by color, with stage-specific fits.
+
+Production builds put the application module graph and stylesheet under a content-hashed asset path to prevent mixed cached releases. Root copies remain available for notebook reuse. Publish `dist/`, not the source tree.
