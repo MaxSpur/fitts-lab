@@ -6,4 +6,4 @@ export function sessionState(room,now=Date.now()){
   const draining=!expired&&Date.parse(room.accept_until)>now;
   return{label:expired?'Expired':'Ended',open:false,detail:draining?'Joining is closed. Already joined students can finish queued uploads until '+new Date(room.accept_until).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'.':'Joining and uploads are closed. Saved results remain available.'};
 }
-export function sessionLabel(room){return `${room.title} · ${sessionState(room).label} · ${new Date(room.created_at).toLocaleDateString()}`;}
+export function sessionLabel(room){return `${room.title} · ${sessionState(room).label} · ${new Date(room.created_at).toLocaleString([], {month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;}

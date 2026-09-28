@@ -89,7 +89,7 @@ export class RoomStream {
       this.ws.onopen=()=>{this.joinRef=String(this.ref+1);this.send('phx_join',{config:{private:true,broadcast:{ack:false,self:false},presence:{enabled:false},postgres_changes:[]},access_token:token});this.joinTimer=setTimeout(()=>this.ws?.close(),12000);};
       this.ws.onmessage=e=>{
         let m;try{m=JSON.parse(e.data);}catch{return;}
-        if(m.event==='phx_reply'&&m.ref===this.joinRef){clearTimeout(this.joinTimer);if(m.payload?.status!=='ok'){this.onState('Live stream unavailable · reconciling by polling');this.ws.close();return;}this.retry=0;this.onState('Live · private broadcast');this.onEvent('connected',{});this.startHeartbeat();}
+        if(m.event==='phx_reply'&&m.ref===this.joinRef){clearTimeout(this.joinTimer);if(m.payload?.status!=='ok'){this.onState('Live stream unavailable · reconciling by polling');this.ws.close();return;}this.retry=0;this.onState('Stream connected');this.onEvent('connected',{});this.startHeartbeat();}
         if(m.topic==='phoenix'&&m.event==='phx_reply')this.awaitingHeartbeat=false;
         if(m.event==='broadcast')this.onEvent(m.payload.event,m.payload.payload);
         if(['phx_error','phx_close'].includes(m.event))this.ws.close();
