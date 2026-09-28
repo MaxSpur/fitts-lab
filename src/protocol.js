@@ -1,5 +1,5 @@
 import {hash,seeded,shuffled} from './math.js';
-export const VERSION='1.2.0';
+export const VERSION='1.3.0';
 export const ARENA={width:960,height:460};
 export const TASKS=['horizontal','circles','interfaces'];
 export const TASK_LABELS={horizontal:'Horizontal',circles:'Circles',interfaces:'Interfaces'};
@@ -27,7 +27,8 @@ export function protocol(task,identity='local') {
     const p={task,variant,count:8,condition:variant,layoutSeed};
     return{...p,positions:boundarySequence(p)};
   });
-  return edges;
+  const layoutSeed=hash(identity+'-buttons');
+  return[{task,variant:'buttons-varied',count:8,condition:'buttons-varied',layoutSeed,positions:buttonSequence('buttons-varied',layoutSeed,8)},...edges];
 }
 export function planLabel(p) {
   if(p.task==='horizontal')return p.positions?`${p.width}px wide · varied distance`:`${p.distance}px apart · ${p.width}px wide`;
@@ -40,8 +41,8 @@ function varied(points,seed,spreadX,spreadY){
     y:Math.round(p.y+(rand()-.5)*spreadY)}));
 }
 const control=(x,y,w,h,label,kind='button')=>({x,y,w,h,label,kind,shape:'rect'});
-/** Twenty-four serial selections after one unscored starting button. */
-export function buttonSequence(variant,seed){
+/** Serial selections after one unscored start; count defaults to the older 24-trial plan. */
+export function buttonSequence(variant,seed,count=24){
   const rand=seeded(seed),compact=variant==='buttons-compact';
   const xs=[125,300,480,660,835],ys=[78,154,230,306,382];
   const sites=ys.flatMap(y=>xs.map(x=>({x:x+Math.round((rand()-.5)*24),y:y+Math.round((rand()-.5)*18)})));
@@ -51,6 +52,7 @@ export function buttonSequence(variant,seed){
     if(candidate.every((p,i)=>!i||Math.hypot(p.x-candidate[i-1].x,p.y-candidate[i-1].y)>=145)){order=candidate;break;}
   }
   if(!order)throw new Error('Could not lay out button sequence.');
+  if(count===8){const sizes=shuffled([[64,28],[88,32],[112,36],[144,44]].flatMap(s=>[s,s]),seed^0x9e3779b9);return order.slice(0,9).map((p,i)=>{const s=i?sizes[i-1]:[96,34];return control(p.x,p.y,s[0],s[1],'','button');});}
   const choices=compact?[[64,28],[80,30],[96,34],[112,38]]:variant==='buttons-standard'?[[80,32],[104,36],[128,40],[152,44]]:[[64,28],[80,30],[96,34],[112,38],[128,40],[152,44]];
   const sizes=shuffled(Array.from({length:25},(_,i)=>choices[i%choices.length]),seed^0x9e3779b9);
   return order.map((p,i)=>control(p.x,p.y,sizes[i][0],sizes[i][1],'','button'));

@@ -64,10 +64,13 @@ test('circular random paths visit distinct sites and balance four chord lengths'
  }
  assert.ok(sequences.size>100);
 });
-test('guided interfaces use four eight-selection mixed button/control sets, free first',()=>{
+test('guided interfaces start with random buttons before two free-first boundary pairs',()=>{
  const ps=protocol('interfaces','layout-test');
- assert.deepEqual(ps.map(p=>p.variant),['menu-floating','menu-edge','corner-floating','corner-edge']);
- for(const p of ps){
+ assert.deepEqual(ps.map(p=>p.variant),['buttons-varied','menu-floating','menu-edge','corner-floating','corner-edge']);
+ const buttons=ps[0];assert.equal(buttons.count,8);assert.equal(buttons.positions.length,9);
+ assert.ok(buttons.positions.every(t=>!t.label));assert.equal(new Set(buttons.positions.map(t=>`${t.x},${t.y}`)).size,9);
+ const widths=buttons.positions.slice(1).map(t=>t.w);for(const width of [64,88,112,144])assert.equal(widths.filter(w=>w===width).length,2);
+ for(const p of ps.slice(1)){
   assert.equal(p.count,8);assert.equal(p.positions.length,9);
   assert.ok(new Set(p.positions.map(t=>t.w)).size>=4);
   for(let i=1;i<=8;i++){
@@ -132,8 +135,8 @@ test('boundary chart only connects comparable input conditions',()=>{
 });
 test('classroom preview follows current guided task lengths and includes circles',()=>{
   const rows=simulationRows(1,28);
-  assert.deepEqual(['horizontal','circles','interfaces'].map(t=>rows.filter(r=>r.task===t).length),[32,32,32]);
-  assert.equal(rows.filter(r=>r.task==='interfaces'&&Number.isFinite(r.index_difficulty)).length,16);
+  assert.deepEqual(['horizontal','circles','interfaces'].map(t=>rows.filter(r=>r.task===t).length),[32,32,40]);
+  assert.equal(rows.filter(r=>r.task==='interfaces'&&Number.isFinite(r.index_difficulty)).length,24);
   assert.equal(boundaryRows(rows).length,4);
 });
 test('ingress validation strips client identities and recomputes difficulty',()=>{const{e,rows}=engine();e.activate();e.click(e.home,0);e.click(e.target,300);const r={...rows[0],index_difficulty:999,participant_id:'FAKE',path:downsample(rows[0].path,40)};const v=validateTrial(r);assert.equal(v.participant_id,undefined);assert.notEqual(v.index_difficulty,999);assert.equal(v.hit,true);});
@@ -174,9 +177,9 @@ test('session labels reflect ended, draining and expired admission',()=>{
  assert.equal(sessionState(r,now+3600001).label,'Expired');
  assert.match(sessionLabel({...r,status:'closed'}),/Ended/);
 });
-test('each stage has four sets of eight scored selections',()=>{
+test('all sets have eight selections; Interfaces adds one ordinary-button baseline',()=>{
  for(const task of ['horizontal','circles','interfaces']){
-  const ps=protocol(task,'balanced');assert.equal(ps.length,4);assert.ok(ps.every(p=>p.count===8));
+  const ps=protocol(task,'balanced');assert.equal(ps.length,task==='interfaces'?5:4);assert.ok(ps.every(p=>p.count===8));
  }
 });
 test('circular engine records the planned chord as its condition',()=>{

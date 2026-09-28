@@ -296,3 +296,5 @@ The production build versions application asset paths by content hash. Publish t
 For repeat runs (1.1.1), redeploy `classroom-api` before the frontend so ingress preserves optional `run_id` and `run_number`. They are stored in the existing trial JSON; no database migration is needed. Older clients and queued records without those fields remain accepted. The legacy room phase field can remain in the database; current clients ignore it.
 
 The 1.2.0 shorter randomized protocol and chart legend changes require only the frontend deployment. Existing trial variants and JSON fields are unchanged; no further SQL or Edge Function update is required after 1.1.1. Earlier trials remain available and fits stay separated by application version.
+
+Version 1.3.0 restores the ordinary-button Interface baseline and adds the geometric Method explorer. The `buttons-varied` variant is already accepted by ingress. Deploy the frontend only; no SQL or Edge Function change is needed. Existing results remain saved and version-separated.

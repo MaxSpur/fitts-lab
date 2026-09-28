@@ -80,9 +80,10 @@ is different from projected bounding-box width and from statistically
 effective width inferred from endpoint variance. There is no claim that
 it is a universal 2D Fitts model.</p>
 <h2 id="default-conditions">Default conditions</h2>
-<p>Each stage has four sets of eight scored selections: 32 per stage, 96
-in a complete run. Starting clicks and retries are additional. All
-guided sets continue from the last successful click without homing.</p>
+<p>Horizontal and Circles each have four sets of eight scored selections
+(32 each). Interfaces has five sets of eight (40): 104 selections in a
+complete run. Starting clicks and retries are additional. All guided
+sets continue from the last successful click without homing.</p>
 <p>Horizontal: one set at each width of 20, 32, 48, and 64 logical
 units, in seeded order. Designed distances 120, 240, 360, and 480 occur
 twice per width, with no adjacent repeated distance. Positions vary
@@ -96,8 +97,9 @@ units. No target is revisited within a set, and no connection is
 diametrically opposite. Distance and width remain balanced while
 connection order and direction vary. These are randomized pointing
 sequences, not a standardized reciprocal tapping test.</p>
-<p>Interfaces: four sets of eight, alternating ordinary buttons with
-menu items or window controls. The sets are menu free, menu edge, window
+<p>Interfaces begins with eight ordinary-button selections: four sizes
+(64 × 28, 88 × 32, 112 × 36, and 144 × 44 logical units) occur twice
+each at seeded positions. Four sets follow: menu free, menu edge, window
 free, and window edges. Each starts with one unscored ordinary button,
 followed by four control approaches and four selections of ordinary
 buttons. Sizes and positions vary within each set; these are exploratory
@@ -135,27 +137,40 @@ pauses. The application does not request raw
 relative input behavior, with operating-system acceleration normally
 retained. Relative units and acceleration should still be checked on the
 actual browsers/devices.</p>
-<p>Guided horizontal and circular sets default to the system cursor. The
-cursor selector can start a new set in captured mode; earlier attempts
-remain in history. Automatic mode uses captured input on both sides of
-guided menu/window pairs so the free and bounded cases share an input
-path. Hard-boundary conditions require captured input. During captured
-movement, the virtual cursor is positioned directly from mouse events. A
-separate low-resolution transparent Canvas draws the live path at up to
-about 30 frames per second without repainting the main arena. The last
-completed path remains visible after a successful click. This reduces
-application-side work but cannot remove latency introduced by a
-browser's Pointer Lock implementation. Test the actual classroom browser
-and pointing devices before interpreting captured timing. Smooth bounded
-jitter is an optional sinusoidal two-frequency offset, defined as a
-function of time, not event count; its displayed cursor position is also
-the hit-test point. It is an illustration of an unsteady pointer, not a
-clinical impairment model. Gain is a scalar on relative input, not a
-replacement OS acceleration curve. The first relative movement event
-after lock is ignored only if it is an implausibly large cursor-warp
-delta.</p>
+<p>Guided horizontal, circular, and ordinary-button sets default to the
+system cursor. The cursor selector can start a new set in captured mode;
+earlier attempts remain in history. Automatic mode uses captured input
+on both sides of guided menu/window pairs so the free and bounded cases
+share an input path. Hard-boundary conditions require captured input.
+During captured movement, the virtual cursor is positioned directly from
+mouse events. A separate low-resolution transparent Canvas draws the
+live path at up to about 30 frames per second without repainting the
+main arena. The last completed path remains visible after a successful
+click. This reduces application-side work but cannot remove latency
+introduced by a browser's Pointer Lock implementation. Test the actual
+classroom browser and pointing devices before interpreting captured
+timing. Smooth bounded jitter is an optional sinusoidal two-frequency
+offset, defined as a function of time, not event count; its displayed
+cursor position is also the hit-test point. It is an illustration of an
+unsteady pointer, not a clinical impairment model. Gain is a scalar on
+relative input, not a replacement OS acceleration curve. The first
+relative movement event after lock is ignored only if it is an
+implausibly large cursor-warp delta.</p>
 <h2 id="equations-and-the-boundary-limit">Equations and the boundary
 limit</h2>
+<p>The participant page places the full explanation after Results. Its
+target editor is an unrecorded one-dimensional illustration: dragging
+translates the target, handles change either edge, and numeric inputs
+specify the near edge and width in illustration units. The view
+automatically rescales after a drag. Arrow keys move a focused handle by
+10 units (Shift: 50); Escape cancels an active drag. Finite geometry is
+retained when toggling the unbounded limit. Presets contrast farther at
+fixed width, wider at fixed centre distance, and uniform scaling.</p>
+<p>The logarithm can be motivated by a halving analogy: reducing a
+region from L to W in k binary steps gives L/2^k = W, hence k =
+log2(L/W). This is an intuition, not a derived motor mechanism. The
+index and its approximately linear relationship with observed time are
+model choices evaluated against data.</p>
 <p>Ordinary-target charts use Shannon difficulty:</p>
 <pre class="text"><code>ID = log2(1 + D/W)
 T = a + b*ID</code></pre>
@@ -299,4 +314,4 @@ Classroom regressions still pool observations within protocol/input
 groups: students who repeat contribute more observations. Repeats are
 not additional independent students. Records made before run IDs were
 added appear as Earlier results.</p>
-<footer>Fitts Lab 1.2.0 · <a href="METHODS.md">Markdown source</a></footer></main></body></html>
+<footer>Fitts Lab 1.3.0 · <a href="METHODS.md">Markdown source</a></footer></main></body></html>

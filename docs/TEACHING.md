@@ -6,7 +6,7 @@ The exercise is an aside in the introduction to HCI. Keep the measurement mechan
 
 Open a new session on `classroom.html`, check a real participant connection, and have the permanent participant URL ready in the slides/chat. Present the instructor window. Guided horizontal and circular sets default to the system cursor. The matched boundary sets use a captured cursor in Automatic mode; try them on the classroom machines before comparing times. Ask students to use one device throughout. Device selection is omitted. Use a mouse or trackpad; touch and pen trajectories are not supported.
 
-The guided protocol contains 32 selections in each stage (96 total): four sets of eight in Horizontal, Circles, and Interfaces. Horizontal and Circles each use four sizes with four travel distances occurring twice per size. Interfaces mixes ordinary buttons with controls in two matched free/edge pairs. Equal selection counts do not guarantee equal duration. These short runs are teaching samples; use class aggregates or repeat runs for more observations, and allow practice before comparing timings.
+The guided protocol contains four sets of eight in Horizontal and Circles (32 each), and five sets of eight in Interfaces (40): 104 selections total. Horizontal and Circles each use four sizes with four travel distances occurring twice per size. Interfaces starts with eight random ordinary buttons, then mixes buttons with controls in two matched free/edge pairs. All sets use eight selections; duration varies with difficulty. These short runs are teaching samples; use class aggregates or repeat runs for more observations, and allow practice before comparing timings.
 
 ## Run sheet
 

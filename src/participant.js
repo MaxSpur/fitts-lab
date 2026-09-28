@@ -1,9 +1,10 @@
+import {initGeometryLab} from './geometry-lab.js';
 import {nextRun,completedStages} from './runs.js';
 import {CONFIG} from '../config.js';
 import {$,$$,text,toast,common,download,csv} from './ui.js';
 import {ArenaController} from './engine.js';
 import {protocol,circleSequence,buttonSequence,boundarySequence,BUTTON_SETS,TASKS,TASK_LABELS,planLabel,taskHint,VERSION} from './protocol.js';
-import {hash,firstAttempts,mean,nearFar,pathRows,speedRows,endpointRows} from './math.js';
+import {hash,firstAttempts,mean,pathRows,speedRows,endpointRows} from './math.js';
 import {boundaryRows,trendlines,trendCaption,plotAxis} from './analysis.js';
 import {Chart} from './charts.js';
 import {pathSpec,speedSpec,endpointsSpec,scatterSpec,boundarySpec} from './specs.js';
@@ -17,7 +18,7 @@ let refreshTimer=null,saveFailed=false,resultExtent=1600,resultAxis='index_diffi
 try{rows=await all('trials');sets=await all('sets');sets.sort((a,b)=>a.created_at.localeCompare(b.created_at));}catch(e){saveFailed=true;toast('Persistent storage is unavailable. Export your measurements before closing this page.',true);}
 if(!saved('horizontal-protocol-v8',false)){progress.horizontal=0;save('progress',progress);save('horizontal-protocol-v8',true);}
 if(!saved('circles-protocol-v5',false)){progress.circles=0;save('progress',progress);save('circles-protocol-v5',true);}
-if(!saved('interfaces-protocol-v8',false)){progress.interfaces=0;save('progress',progress);save('interfaces-protocol-v8',true);}
+if(!saved('interfaces-protocol-v9',false)){progress.interfaces=0;save('progress',progress);save('interfaces-protocol-v9',true);}
 const charts={paths:new Chart('#path-chart'),speed:new Chart('#speed-chart'),endpoints:new Chart('#endpoint-chart'),combined:new Chart('#combined-results'),interfaces:new Chart('#interface-results')};
 const outbox=new Outbox(({pending,message,blocked})=>{
   text('#saved-count',`${rows.length} attempts saved${saveFailed?' in memory only':''}${pending?` · ${pending} awaiting upload`:''}`);
@@ -49,7 +50,7 @@ function selectedPlan(){
     const completed=sets.filter(s=>s.task==='interfaces'&&s.state==='complete'&&s.plan.protocolVersion===VERSION&&s.options?.runId===currentRun.id&&
       (BUTTON_SETS.includes(p.variant)?s.plan.variant===p.variant:s.plan.variant.startsWith(pair))).length;
     p.layoutSeed=hash(`${person}-${currentRun.id}-${pair}-${BUTTON_SETS.includes(p.variant)?completed:Math.floor(completed/2)}`);
-    p.positions=BUTTON_SETS.includes(p.variant)?buttonSequence(p.variant,p.layoutSeed):boundarySequence(p);
+    p.positions=BUTTON_SETS.includes(p.variant)?buttonSequence(p.variant,p.layoutSeed,p.count):boundarySequence(p);
   }
   return p;
 }
@@ -176,11 +177,7 @@ $('#new-run').onclick=()=>{
 };
 $('#clear-data').onclick=async()=>{if(!confirm('Clear all participant trials and set history in this browser? Export first. Pending uploads will also be removed. The instructor’s stored copy is unchanged.'))return;
   arena.pause('Cleared local history');for(const store of ['trials','sets','outbox'])await clear(store);rows=[];sets=[];progress={};save('progress',progress);updateRunControls();prepare();renderResults();outbox.status();};
-function limit(){const near=Number($('#near-slider').value),far=$('#infinite-toggle').checked?Infinity:Number($('#far-slider').value),x=20+near/1800*390,end=far===Infinity?432:20+far/1800*390;
-  $('#edge-rect').setAttribute('x',x);$('#edge-rect').setAttribute('width',end-x);$('#near-label').setAttribute('x',x);$('#near-label').textContent=`near ${near}`;$('#far-label').setAttribute('x',Math.min(end,390));$('#far-label').textContent=far===Infinity?'far → ∞':`far ${far}`;$('#infinity-symbol').toggleAttribute('hidden',far!==Infinity);$('#far-slider').disabled=far===Infinity;
-  text('#limit-value',far===Infinity?`Original-formula ID → 0 bits · Shannon ID → ${nearFar(near,far,'shannon').toFixed(3)} bits`:
-    `Original-formula ID = ${nearFar(near,far).toFixed(3)} bits`);}
-for(const q of ['#near-slider','#far-slider','#infinite-toggle'])$(q).oninput=limit;limit();
+initGeometryLab();
 async function discoverRoom(){
   const useLocal=new URLSearchParams(location.search).has('local');
   if(useLocal){const room=localRoom();return room?.status==='open'?{room,source:'local'}:null;}

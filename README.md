@@ -2,7 +2,7 @@
 
 Two static websites for a classroom introduction to human–computer interaction.
 
-- **`index.html` — participant.** Three stages, each with four sets of eight timed selections. Horizontal and Circles use four target sizes and balanced, randomized distances; Interfaces alternates ordinary buttons with menu/window controls in matched free/edge sets. Each guided set has one unscored start, then continues from target to target. Horizontal and Circles use the system cursor by default; the matched free/edge sets use a captured cursor. Live movement traces, descriptive trendlines, browser history, and CSV/JSON exports are included.
+- **`index.html` — participant.** Eight timed selections per set: four sets each for Horizontal and Circles, five for Interfaces. Horizontal and Circles use four target sizes and balanced, randomized distances; Interfaces starts with random buttons, followed by matched menu and window free/edge pairs. Each guided set has one unscored start, then continues from target to target. Horizontal, Circles, and random buttons use the system cursor by default; the matched free/edge sets use a captured cursor. Live movement traces, descriptive trendlines, browser history, and CSV/JSON exports are included.
 - **`classroom.html` — instructor.** A live activity list with stage coverage and per-run inspection, incoming-data pulses, Distance, Size, and Difficulty views, linked participant inspection, paired boundary comparisons, freeze/presentation modes, exports and snapshot imports.
 
 Both are complete static applications. The participant page works without a backend. Multi-computer classroom sharing requires the included Supabase schema and Edge Function to be deployed and configured; a hosted project is **not** included or pre-provisioned.
@@ -81,3 +81,5 @@ In the classroom’s **Session & participant link** controls, **Reset data…** 
 Results combine all stages using square/circle/diamond glyphs. The classroom assigns a color to each student; click a run or point to highlight them. Session status distinguishes Open, Ended, and Expired; ended sessions retain results and briefly accept queued uploads. **Sync now** reconciles saved measurements immediately.
 
 After all three stages, **Start another run** begins a fresh dataset. Earlier results remain available in the Run selector and exports. In a classroom, repeats stay under the same student and appear as separate run rows; no rejoining is needed. The instructor does not control student stages. Distance, Size, and Difficulty views are available on both pages.
+
+The participant page follows Experiment → Movement detail → Results → Method. The final Method section explains the geometry, logarithmic index, fitted timing model, and boundary limit. Drag or resize its target, enter numeric geometry, or compare the three formulations; this illustration does not record trials.
