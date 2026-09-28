@@ -1,0 +1,6 @@
+project_id = "fitts-lab"
+
+[functions.classroom-api]
+# This function has public status/join endpoints and custom participant credentials.
+# EVERY privileged action is separately authorized inside the handler.
+verify_jwt = false

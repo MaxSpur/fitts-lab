@@ -1,0 +1,14 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {handle} from '../supabase/functions/_shared/handler.js';
+const user='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',room='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+const env={url:'https://example.supabase.co',key:'sb_secret_test',origins:'http://localhost:4173'};
+const req=(body,headers={})=>new Request('https://example.supabase.co/functions/v1/classroom-api',{method:'POST',headers:{'content-type':'application/json',origin:'http://localhost:4173',...headers},body:JSON.stringify(body)});
+const response=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:{'Content-Type':'application/json'}});
+test('unauthorized origins cannot use the browser endpoint',async()=>{const r=await handle(req({action:'status',slug:'hci'},{origin:'https://evil.example'}),env);assert.equal(r.status,403);assert.equal(r.headers.get('access-control-allow-origin'),null);});
+test('instructor action requires a bearer token',async()=>{const r=await handle(req({action:'list',slug:'hci'}),env);assert.equal(r.status,401);});
+test('a valid Auth user without allowlist membership has no instructor access',async()=>{const fake=async url=>url.includes('/auth/v1/user')?response({id:user}):response([]);const r=await handle(req({action:'list',slug:'hci'},{authorization:'Bearer test-user'}),env,fake);assert.equal(r.status,403);});
+test('an instructor cannot snapshot someone else’s room',async()=>{const fake=async url=>url.includes('/auth/v1/user')?response({id:user}):url.includes('/instructors?')?response([{user_id:user}]):response([]);const r=await handle(req({action:'snapshot',room_id:room,after:'0'},{authorization:'Bearer test-user'}),env,fake);assert.equal(r.status,404);});
+test('public status returns session metadata, not owner or credentials',async()=>{const r=await handle(req({action:'status',slug:'hci'}),env,async()=>response([{id:room,slug:'hci',title:'Class',owner_id:user,token_hash:'SECRET',status:'open'}]));const b=await r.json();assert.equal(b.room.owner_id,undefined);assert.equal(b.room.token_hash,undefined);});
+test('join hashes participant credential before calling PostgreSQL',async()=>{let payload;const r=await handle(req({action:'join',room_id:room,client_key:user,token:'ab'.repeat(32),device:'mouse'}),env,async(url,o)=>{payload=JSON.parse(o.body);return response({id:user,label:'P-TEST',device:'mouse'});});assert.equal(r.status,200);assert.equal(payload.p_hash.length,64);assert.notEqual(payload.p_hash,'ab'.repeat(32));assert.equal(payload.token,undefined);});
+test('oversized requests are rejected before parsing their data',async()=>{const r=await handle(req({action:'status',slug:'hci'},{'content-length':'200000'}),env);assert.equal(r.status,413);});
+test('missing server configuration fails closed',async()=>{const r=await handle(req({action:'status',slug:'hci'}),{url:'',key:'',origins:''});assert.equal(r.status,503);});

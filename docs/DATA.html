@@ -1,0 +1,180 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Data and export format · Fitts Lab</title><style>*{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#21314b;font:16px/1.7 system-ui,-apple-system,sans-serif}main{max-width:1020px;margin:40px auto 80px;background:white;padding:40px 52px;border:1px solid #e1e7f0;border-radius:12px}nav{max-width:1020px;margin:26px auto;display:flex;gap:20px;flex-wrap:wrap;padding:0 12px}a{color:#3159ef;text-decoration:none}a:hover{text-decoration:underline}h1,h2,h3{line-height:1.2;letter-spacing:-.025em;color:#142844}h1{font-size:38px;margin-top:0}h2{font-size:25px;margin-top:2em;padding-top:12px;border-top:1px solid #edf1f6}h3{font-size:19px;margin-top:1.7em}p{max-width:85ch}pre{overflow:auto;background:#f1f4fa;border:1px solid #e3e8f1;padding:18px;border-radius:7px;font:13px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em}p code,li code{background:#f1f4fa;padding:2px 4px;border-radius:3px}table{border-collapse:collapse;width:100%;font-size:14px;display:block;overflow-x:auto}th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid #e5eaf2;min-width:115px}th{background:#eef2fa}li{margin:8px 0}blockquote{border-left:3px solid #3159ef;margin-left:0;padding-left:20px;color:#566984}footer{margin-top:44px;color:#6b7b91;font-size:13px}a,td{overflow-wrap:anywhere}@media(max-width:700px){main{margin:16px 12px;padding:26px 20px}h1{font-size:30px}}@media print{body{background:white;font-size:10pt}main{border:0;margin:0;padding:0}nav{display:none}pre{white-space:pre-wrap}a{color:inherit}h2{break-after:avoid}table{display:table}}</style></head><body><nav><strong>Fitts Lab / guides</strong> <a href="../index.html">Participant</a> <a href="../classroom.html">Classroom</a> <a href="DEPLOYMENT.html">Deployment</a> <a href="TEACHING.html">Teaching</a> <a href="METHODS.html">Methods</a> <a href="NOTEBOOK.html">Notebook</a> <a href="TESTING.html">Testing</a></nav><main><h1 id="data-and-export-format">Data and export format</h1>
+<h2 id="what-one-row-means">What one row means</h2>
+<p>One trial row is one timed primary-button press, successful or
+missed. A movement can have multiple attempts; their durations are
+cumulative from activation of the same target. Unscored starting clicks
+and incomplete paused movements are not trial rows. Set JSON records
+contain interruption logs.</p>
+<p>CSV is the compact analysis table. JSON contains the same records,
+sampled paths, and session/set metadata. Credentials and passwords are
+excluded from both exports. The participant stores local records in
+IndexedDB and exports them even when an upload is pending or
+unavailable.</p>
+<h2 id="principal-fields">Principal fields</h2>
+<table>
+<thead>
+<tr>
+<th>Fields</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schema_version</code>, <code>app_version</code></td>
+<td>Record and application versions; currently 1 and 1.0.6.</td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td>Origin label: participant-side records, server-accepted classroom
+records, or explicitly synthetic simulation. Instructor top-level
+exports also record source mode.</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>Unique attempt UUID. Server retries are deduplicated within
+participant.</td>
+</tr>
+<tr>
+<td><code>participant_id</code>, <code>participant_label</code></td>
+<td>Random identity and display label. Server replaces client identity
+fields with its authenticated participant identity.</td>
+</tr>
+<tr>
+<td><code>room_id</code></td>
+<td>Classroom UUID when shared; null for standalone records.</td>
+</tr>
+<tr>
+<td><code>set_id</code>, <code>movement_id</code>,
+<code>target_index</code>, <code>attempt</code></td>
+<td>Set, target-activation sequence, zero-based completed-target index,
+and one-based press attempt.</td>
+</tr>
+<tr>
+<td><code>task</code>, <code>variant</code>, <code>condition</code></td>
+<td>Task family (<code>horizontal</code>, <code>circles</code>,
+<code>interfaces</code>), target type, and condition key. Guided
+horizontal keys identify each designed distance and width. Guided
+menu/window keys distinguish approaches to a control
+(<code>-control</code>) from travel back to an ordinary button
+(<code>-between</code>).</td>
+</tr>
+<tr>
+<td><code>hit</code>, <code>practice</code></td>
+<td>Boolean outcome and optional protocol flag. Current guided timed
+rows are not practice.</td>
+</tr>
+<tr>
+<td><code>acquisition_ms</code></td>
+<td>Target activation to this press, in milliseconds. Includes
+reaction/correction.</td>
+</tr>
+<tr>
+<td><code>completion_ms</code></td>
+<td>Same elapsed duration for a successful press; null for a miss.</td>
+</tr>
+<tr>
+<td><code>distance</code></td>
+<td>Actual starting point to target center, in CSS pixels.</td>
+</tr>
+<tr>
+<td><code>nominal_distance</code></td>
+<td>Designed source-center to target center, in CSS pixels.</td>
+</tr>
+<tr>
+<td><code>target_w</code>, <code>target_h</code></td>
+<td>Target dimensions in CSS pixels. For a circle both equal its
+diameter.</td>
+</tr>
+<tr>
+<td><code>approach_width</code></td>
+<td>Circle diameter or rectangular center-directed chord.</td>
+</tr>
+<tr>
+<td><code>index_difficulty</code></td>
+<td>Shannon <code>log2(1 + distance/approach_width)</code>; null for
+edge/corner constrained variants. Recomputed on upload.</td>
+</tr>
+<tr>
+<td><code>start_x/y</code>, <code>target_x/y</code>,
+<code>click_x/y</code></td>
+<td>Arena-relative CSS-pixel coordinates, y downward.</td>
+</tr>
+<tr>
+<td><code>path</code></td>
+<td>JSON array <code>{x,y,t}</code>; CSS coordinates, elapsed
+milliseconds from activation. Up to 120 local samples and 40 uploaded
+samples. Not included in CSV.</td>
+</tr>
+<tr>
+<td><code>perturbation</code>, <code>jitter_css_px</code>,
+<code>gain</code>, <code>seed</code></td>
+<td>Normal/jitter setting, amplitude parameter, scalar gain,
+reproducibility seed.</td>
+</tr>
+<tr>
+<td><code>input_mode</code>, <code>device</code></td>
+<td>Virtual/native implementation; self-reported coarse device
+category.</td>
+</tr>
+<tr>
+<td><code>viewport_width</code>, <code>dpr</code></td>
+<td>Displayed arena width in CSS pixels; device-pixel ratio.</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td>Client UTC timestamp for chronology, not the duration clock.</td>
+</tr>
+<tr>
+<td><code>seq</code></td>
+<td>Server-assigned sequence included in instructor records for
+reconciliation. Not a timing measurement.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="recommended-analysis-choices">Recommended analysis choices</h2>
+<p>Use JSON when you need trajectories, reliable boolean types, or
+complete metadata. For speed–difficulty analysis, filter to the chosen
+task and input condition, <code>attempt==1</code>, and
+<code>practice==false</code>. Keep first-attempt errors available for an
+accuracy summary. Fit successful attempts or condition means only with a
+clearly stated error treatment; do not silently call a corrected-success
+duration a first-attempt movement.</p>
+<p>Do not add the cumulative durations of successive retries. Total
+movement completion time is the <code>completion_ms</code> of its
+successful final attempt. A movement interrupted after a miss may have
+no success; its attempts remain observable and the set log records
+interruption.</p>
+<p>Device and person identifiers are grouping variables, not performance
+rankings. Boundary conditions belong in their matched comparison.
+Missing scalar difficulty is intentional.</p>
+<h2 id="storage-retries-and-cloud-copies">Storage, retries, and cloud
+copies</h2>
+<p>Local browser stores: <code>trials</code>, <code>sets</code>,
+<code>meta</code>, <code>outbox</code>, and <code>localClass</code>.
+Ordinary preferences and participant credentials use localStorage;
+instructor Auth tokens use sessionStorage. JSON exports omit these
+secrets.</p>
+<p>Uploads are buffered and retried. The server acknowledges individual
+IDs; only acknowledged outbox entries are removed. Local records are
+retained after acknowledgement. PostgreSQL stores each accepted attempt,
+including its bounded path, inside <code>trials.data</code>; indexed
+columns carry room/participant/attempt identifiers and a monotonic
+insertion sequence.</p>
+<p>The server serializes insertion transactions per room so its snapshot
+cursor does not skip a lower-sequence transaction that commits late.
+Broadcast notifications do not advance the authoritative snapshot
+cursor. On reconnect the instructor retrieves records after that cursor
+and deduplicates any already seen live events.</p>
+<p>A room is open for up to 24 hours. Closing stops new joins and leaves
+a ten-minute upload grace period, bounded by expiry. Deletion removes
+room, participants, and measurements through cascading foreign keys. It
+does not remove files someone already downloaded or participant-local
+browser history. Realtime's own temporary message retention is
+controlled by Supabase; see SECURITY.</p>
+<h2 id="reproducibility-limits">Reproducibility limits</h2>
+<p>A perturbation seed and geometry are preserved, but the entire OS
+input trajectory, driver acceleration, and display timing are not
+recreated from the export. Sampled paths are sufficient for the teaching
+views; they are not an exact replay of every input event. The
+application records neither screen contents nor general keystrokes.</p>
+<footer>Fitts Lab 1.0.6 · <a href="DATA.md">Markdown source</a></footer></main></body></html>

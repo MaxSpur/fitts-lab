@@ -1,0 +1,57 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+  "description": "Fitts Lab first-attempt horizontal measurements. Place fitts-trials.csv beside this specification.",
+  "width": 640,
+  "height": 320,
+  "data": {
+    "url": "fitts-trials.csv",
+    "format": {
+      "type": "csv",
+      "parse": {
+        "attempt": "number",
+        "practice": "boolean",
+        "hit": "boolean",
+        "index_difficulty": "number",
+        "acquisition_ms": "number"
+      }
+    }
+  },
+  "transform": [
+    {
+      "filter": "datum.task === 'horizontal' && datum.attempt === 1 && !datum.practice && datum.perturbation === 'normal'"
+    }
+  ],
+  "mark": {
+    "type": "point",
+    "filled": true
+  },
+  "encoding": {
+    "x": {
+      "field": "index_difficulty",
+      "type": "quantitative",
+      "title": "Difficulty (bits)"
+    },
+    "y": {
+      "field": "acquisition_ms",
+      "type": "quantitative",
+      "title": "Acquisition time (ms)"
+    },
+    "color": {
+      "field": "hit",
+      "type": "nominal"
+    },
+    "tooltip": [
+      {
+        "field": "participant_label"
+      },
+      {
+        "field": "acquisition_ms",
+        "type": "quantitative",
+        "format": ".0f"
+      },
+      {
+        "field": "hit"
+      }
+    ]
+  }
+}

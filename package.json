@@ -1,0 +1,15 @@
+{
+  "name": "fitts-lab",
+  "version": "1.0.6",
+  "private": true,
+  "type": "module",
+  "description": "A local-first Fitts' law teaching experiment and live classroom projector.",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs"
+  },
+  "engines": {"node": ">=20"}
+}

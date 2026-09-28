@@ -1,0 +1,146 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reuse one chart in Observable · Fitts Lab</title><style>*{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#21314b;font:16px/1.7 system-ui,-apple-system,sans-serif}main{max-width:1020px;margin:40px auto 80px;background:white;padding:40px 52px;border:1px solid #e1e7f0;border-radius:12px}nav{max-width:1020px;margin:26px auto;display:flex;gap:20px;flex-wrap:wrap;padding:0 12px}a{color:#3159ef;text-decoration:none}a:hover{text-decoration:underline}h1,h2,h3{line-height:1.2;letter-spacing:-.025em;color:#142844}h1{font-size:38px;margin-top:0}h2{font-size:25px;margin-top:2em;padding-top:12px;border-top:1px solid #edf1f6}h3{font-size:19px;margin-top:1.7em}p{max-width:85ch}pre{overflow:auto;background:#f1f4fa;border:1px solid #e3e8f1;padding:18px;border-radius:7px;font:13px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em}p code,li code{background:#f1f4fa;padding:2px 4px;border-radius:3px}table{border-collapse:collapse;width:100%;font-size:14px;display:block;overflow-x:auto}th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid #e5eaf2;min-width:115px}th{background:#eef2fa}li{margin:8px 0}blockquote{border-left:3px solid #3159ef;margin-left:0;padding-left:20px;color:#566984}footer{margin-top:44px;color:#6b7b91;font-size:13px}a,td{overflow-wrap:anywhere}@media(max-width:700px){main{margin:16px 12px;padding:26px 20px}h1{font-size:30px}}@media print{body{background:white;font-size:10pt}main{border:0;margin:0;padding:0}nav{display:none}pre{white-space:pre-wrap}a{color:inherit}h2{break-after:avoid}table{display:table}}</style></head><body><nav><strong>Fitts Lab / guides</strong> <a href="../index.html">Participant</a> <a href="../classroom.html">Classroom</a> <a href="DEPLOYMENT.html">Deployment</a> <a href="TEACHING.html">Teaching</a> <a href="METHODS.html">Methods</a> <a href="NOTEBOOK.html">Notebook</a> <a href="TESTING.html">Testing</a></nav><main><h1 id="reuse-one-chart-in-observable">Reuse one chart in
+Observable</h1>
+<p>This is optional follow-on material. The short HCI demonstration does
+not require students to inspect the code. The application deliberately
+keeps chart definitions in <code>src/specs.js</code>, separate from
+pointer locking, timing, persistence, and networking.</p>
+<p>The supplied railway-data notebook introduces <code>data</code>,
+<code>mark</code>, <code>encoding</code>, quantitative/nominal types,
+Arquero grouping, and <code>params</code> selections. These examples use
+the same basic pattern, with the class's own measurements. They do not
+replace or modify the notebook's railway exercises.</p>
+<h2 id="fastest-route-export-exactly-what-you-see">Fastest route: export
+exactly what you see</h2>
+<p>Click a chart's <code>&lt;/&gt;</code> / <strong>Code</strong> button
+and download its <code>.vl.json</code>. The file contains the
+specification and the data currently plotted. It is a real Vega-Lite
+specification, including any named datasets, rather than a screenshot.
+Open it in Vega Editor deliberately, or attach it to an Observable
+notebook and render it there.</p>
+<p>Be aware that uploading to an external editor or notebook shares the
+included participant data with that service. The Fitts Lab code button
+itself does not send data anywhere.</p>
+<h2 id="start-from-raw-session-json">Start from raw session JSON</h2>
+<p>Export <code>fitts-session.json</code> from the participant site or
+the classroom's JSON export. Attach it to Observable. Use separate
+cells:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>embed <span class="op">=</span> <span class="pp">require</span>(<span class="st">&quot;vega-embed@7&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>session <span class="op">=</span> <span class="cf">await</span> <span class="fu">FileAttachment</span>(<span class="st">&quot;fitts-session.json&quot;</span>)<span class="op">.</span><span class="fu">json</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>trials <span class="op">=</span> session<span class="op">.</span><span class="at">trials</span><span class="op">.</span><span class="fu">filter</span>(d <span class="kw">=&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  d<span class="op">.</span><span class="at">task</span> <span class="op">===</span> <span class="st">&quot;horizontal&quot;</span> <span class="op">&amp;&amp;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  d<span class="op">.</span><span class="at">attempt</span> <span class="op">===</span> <span class="dv">1</span> <span class="op">&amp;&amp;</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">!</span>d<span class="op">.</span><span class="at">practice</span> <span class="op">&amp;&amp;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  d<span class="op">.</span><span class="at">perturbation</span> <span class="op">===</span> <span class="st">&quot;normal&quot;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">embed</span>({</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">$schema</span><span class="op">:</span> <span class="st">&quot;https://vega.github.io/schema/vega-lite/v6.json&quot;</span><span class="op">,</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">width</span><span class="op">:</span> <span class="dv">640</span><span class="op">,</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">height</span><span class="op">:</span> <span class="dv">320</span><span class="op">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">data</span><span class="op">:</span> {<span class="dt">values</span><span class="op">:</span> trials}<span class="op">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">mark</span><span class="op">:</span> {<span class="dt">type</span><span class="op">:</span> <span class="st">&quot;point&quot;</span><span class="op">,</span> <span class="dt">filled</span><span class="op">:</span> <span class="kw">true</span>}<span class="op">,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">encoding</span><span class="op">:</span> {</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">x</span><span class="op">:</span> {</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">field</span><span class="op">:</span> <span class="st">&quot;index_difficulty&quot;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&quot;quantitative&quot;</span><span class="op">,</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&quot;Index of difficulty (bits)&quot;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">y</span><span class="op">:</span> {</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>      <span class="dt">field</span><span class="op">:</span> <span class="st">&quot;acquisition_ms&quot;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&quot;quantitative&quot;</span><span class="op">,</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>      <span class="dt">title</span><span class="op">:</span> <span class="st">&quot;Acquisition time (ms)&quot;</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="dt">color</span><span class="op">:</span> {<span class="dt">field</span><span class="op">:</span> <span class="st">&quot;hit&quot;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&quot;nominal&quot;</span><span class="op">,</span> <span class="dt">title</span><span class="op">:</span> <span class="st">&quot;Successful first attempt&quot;</span>}<span class="op">,</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="dt">tooltip</span><span class="op">:</span> [</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>      {<span class="dt">field</span><span class="op">:</span> <span class="st">&quot;participant_label&quot;</span>}<span class="op">,</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>      {<span class="dt">field</span><span class="op">:</span> <span class="st">&quot;distance&quot;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&quot;quantitative&quot;</span><span class="op">,</span> <span class="dt">format</span><span class="op">:</span> <span class="st">&quot;.1f&quot;</span>}<span class="op">,</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>      {<span class="dt">field</span><span class="op">:</span> <span class="st">&quot;target_w&quot;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&quot;quantitative&quot;</span><span class="op">,</span> <span class="dt">format</span><span class="op">:</span> <span class="st">&quot;.1f&quot;</span>}<span class="op">,</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>      {<span class="dt">field</span><span class="op">:</span> <span class="st">&quot;acquisition_ms&quot;</span><span class="op">,</span> <span class="dt">type</span><span class="op">:</span> <span class="st">&quot;quantitative&quot;</span><span class="op">,</span> <span class="dt">format</span><span class="op">:</span> <span class="st">&quot;.0f&quot;</span>}<span class="op">,</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>      {<span class="dt">field</span><span class="op">:</span> <span class="st">&quot;hit&quot;</span>}</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    ]</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div>
+<p>The notebook export contains both older embed/schema references and
+newer v6 examples. Use a compatible modern embed runtime for these
+examples rather than copying only the v6 schema line into an older
+runtime. The application itself pins and vendors Vega 6.2.0 and
+Vega-Lite 6.4.2. <code>require("vega-embed@7")</code> resolves through
+Observable's package mechanism; classroom use of the application does
+not depend on it.</p>
+<h2 id="click-to-highlight-one-participant">Click to highlight one
+participant</h2>
+<p>Add to that specification:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>params<span class="op">:</span> [{</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">name</span><span class="op">:</span> <span class="st">&quot;picked&quot;</span><span class="op">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">select</span><span class="op">:</span> {<span class="dt">type</span><span class="op">:</span> <span class="st">&quot;point&quot;</span><span class="op">,</span> <span class="dt">fields</span><span class="op">:</span> [<span class="st">&quot;participant_id&quot;</span>]<span class="op">,</span> <span class="dt">on</span><span class="op">:</span> <span class="st">&quot;click&quot;</span><span class="op">,</span> <span class="dt">clear</span><span class="op">:</span> <span class="st">&quot;dblclick&quot;</span>}</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>}]</span></code></pre></div>
+<p>and add an opacity encoding:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>opacity<span class="op">:</span> {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">condition</span><span class="op">:</span> {<span class="dt">param</span><span class="op">:</span> <span class="st">&quot;picked&quot;</span><span class="op">,</span> <span class="dt">value</span><span class="op">:</span> <span class="fl">0.9</span>}<span class="op">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">value</span><span class="op">:</span> <span class="fl">0.12</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>The point selection emphasizes one participant while retaining
+context. This is a chart interaction, separate from target acquisition
+in the experiment. In a layered chart, define the selection on a single
+owning layer to avoid duplicate generated selection signals; see the
+application’s <code>heroSpec</code>.</p>
+<h2 id="an-optional-arquero-cell">An optional Arquero cell</h2>
+<p>This mirrors the notebook's grouping/rollup approach. Use only
+successful first attempts for this timing summary, and separately
+calculate the error rate from all first attempts.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> {aq<span class="op">,</span> op} <span class="im">from</span> <span class="st">&quot;@uwdata/arquero&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>conditionMeans <span class="op">=</span> aq<span class="op">.</span><span class="fu">from</span>(trials)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(d <span class="kw">=&gt;</span> d<span class="op">.</span><span class="at">hit</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">groupby</span>(<span class="st">&quot;participant_id&quot;</span><span class="op">,</span> <span class="st">&quot;condition&quot;</span><span class="op">,</span> <span class="st">&quot;input_mode&quot;</span><span class="op">,</span> <span class="st">&quot;gain&quot;</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">rollup</span>({</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">participant_label</span><span class="op">:</span> d <span class="kw">=&gt;</span> op<span class="op">.</span><span class="fu">any</span>(d<span class="op">.</span><span class="at">participant_label</span>)<span class="op">,</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">index_difficulty</span><span class="op">:</span> d <span class="kw">=&gt;</span> op<span class="op">.</span><span class="fu">mean</span>(d<span class="op">.</span><span class="at">index_difficulty</span>)<span class="op">,</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">acquisition_ms</span><span class="op">:</span> d <span class="kw">=&gt;</span> op<span class="op">.</span><span class="fu">mean</span>(d<span class="op">.</span><span class="at">acquisition_ms</span>)<span class="op">,</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">n</span><span class="op">:</span> d <span class="kw">=&gt;</span> op<span class="op">.</span><span class="fu">count</span>()</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">filter</span>(d <span class="kw">=&gt;</span> d<span class="op">.</span><span class="at">n</span> <span class="op">&gt;=</span> <span class="dv">3</span>)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="op">.</span><span class="fu">objects</span>()</span></code></pre></div>
+<p>The exact application aggregation is also available in
+<code>conditionMeans()</code> in <code>src/math.js</code>. Keeping it as
+plain JavaScript avoids making Arquero a required website
+dependency.</p>
+<h2 id="two-small-extensions">Two small extensions</h2>
+<p><strong>Distance versus difficulty:</strong> duplicate the plot and
+change only the x field from <code>index_difficulty</code> to
+<code>distance</code>. Which grouping caused by target width becomes
+visible? The instructor site animates this change using a Vega signal
+and the View API; the simpler pair of plots is enough for an
+exercise.</p>
+<p><strong>Linked views:</strong> use a point selection to highlight a
+participant in both a scatterplot and a categorical timing summary,
+using <code>hconcat</code> and shared selection logic. This parallels
+the supplied notebook's map/matrix linked-view exercise. Keep geometric
+task and input conditions distinguishable.</p>
+<h2 id="reusing-the-actual-application-specifications">Reusing the
+actual application specifications</h2>
+<p>From another static page served in the project, the essential API
+is:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode js"><code class="sourceCode javascript"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> {embed} <span class="im">from</span> <span class="st">&quot;./vendor/index.js&quot;</span><span class="op">;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> {scatterSpec} <span class="im">from</span> <span class="st">&quot;./src/specs.js&quot;</span><span class="op">;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> spec <span class="op">=</span> <span class="fu">scatterSpec</span>()<span class="op">;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>spec<span class="op">.</span><span class="at">datasets</span> <span class="op">=</span> {</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">trials</span><span class="op">:</span> rows<span class="op">.</span><span class="fu">map</span>(d <span class="kw">=&gt;</span> ({<span class="op">...</span>d<span class="op">,</span> <span class="dt">outcome</span><span class="op">:</span> d<span class="op">.</span><span class="at">hit</span> <span class="op">?</span> <span class="st">&quot;Hit&quot;</span> <span class="op">:</span> <span class="st">&quot;Miss&quot;</span>}))</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="cf">await</span> <span class="fu">embed</span>(<span class="bu">document</span><span class="op">.</span><span class="fu">querySelector</span>(<span class="st">&quot;#chart&quot;</span>)<span class="op">,</span> spec<span class="op">,</span> {<span class="dt">actions</span><span class="op">:</span> <span class="kw">false</span>})<span class="op">;</span></span></code></pre></div>
+<p>For streaming, embed once and update named data through
+<code>view.change(name, vega.changeset()...).runAsync()</code>,
+serializing pulses. See <code>src/charts.js</code>. A specification
+alone does not capture the mouse or time movements; those imperative
+tasks intentionally remain in <code>src/engine.js</code>.</p>
+<p>Minimal JSON examples are in
+<code>examples/basic-scatter.vl.json</code> and
+<code>examples/participant-selection.vl.json</code>. They expect
+<code>fitts-trials.csv</code> alongside them. The code-viewer export is
+preferable when you want a self-contained snapshot with embedded
+values.</p>
+<p>References: <a
+href="https://vega.github.io/vega-lite/docs/selection.html">Vega-Lite
+selection parameters</a>, <a
+href="https://vega.github.io/vega/docs/api/view/">Vega View API</a>, <a
+href="https://vega.github.io/vega-embed/">Vega Embed</a>, and <a
+href="https://uwdata.github.io/arquero/api/op#aggregate-functions">Arquero
+aggregation</a>.</p>
+<footer>Fitts Lab 1.0.6 · <a href="NOTEBOOK.md">Markdown source</a></footer></main></body></html>
