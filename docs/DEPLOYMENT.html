@@ -512,4 +512,10 @@ triggers recovery; Freeze affects rendering only.</p>
 hash. Publish the complete <code>dist/</code> output so HTML, scripts,
 and styles use the same release even when browsers cache older
 files.</p>
+<p>For repeat runs (1.1.1), redeploy <code>classroom-api</code> before
+the frontend so ingress preserves optional <code>run_id</code> and
+<code>run_number</code>. They are stored in the existing trial JSON; no
+database migration is needed. Older clients and queued records without
+those fields remain accepted. The legacy room phase field can remain in
+the database; current clients ignore it.</p>
 <footer>Fitts Lab 1.1.1 · <a href="DEPLOYMENT.md">Markdown source</a></footer></main></body></html>

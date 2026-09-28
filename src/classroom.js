@@ -1,3 +1,4 @@
+import {datasetKey,datasetLabel} from './runs.js';
 import {sessionState,sessionLabel} from './session.js';
 import {CONFIG} from '../config.js';
 import {$,$$,text,toast,common,download,csv,copy} from './ui.js';
@@ -11,26 +12,26 @@ import {all,removeMany,saved,save} from './storage.js';
 import {TASK_LABELS,VERSION} from './protocol.js';
 common();
 const auth=new InstructorAuth(),charts={hero:new Chart('#class-chart'),boundary:new Chart('#class-boundaries'),path:new Chart('#class-path')};
-let source=null,room=null,records=new Map(),participants=new Map(),lastReceived=null,selected=null,stream=null,poll=null,demoTimer=null,cursor='0',syncing=false;
+let source=null,room=null,records=new Map(),participants=new Map(),datasets=new Map(),lastReceived=null,selected=null,stream=null,poll=null,demoTimer=null,cursor='0',syncing=false;
 let connectionRun=0;
 let sourceGeneration=0,frozenPeople=null,frozenRows=null,renderedRows=[];
 let frozen=false,renderedCount=0,renderTimer=null,rendering=false,dirty=false,extent=1600,axis='index_difficulty';
 let streamState='Connecting…',lastSync=null,syncError='';
 const flashes=new Set();const bc=channel();
 function id(r){return `${r.participant_id}:${r.id}`;}
-function reset(next){connectionRun++;sourceGeneration++;frozenPeople=null;frozenRows=null;renderedRows=[];for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).disabled=false;stream?.close();stream=null;clearInterval(poll);clearInterval(demoTimer);clearTimeout(renderTimer);renderTimer=null;dirty=false;cursor='0';source=next;records=new Map();participants=new Map();room=null;selected=null;flashes.clear();extent=1600;lastReceived=null;renderedCount=0;frozen=false;syncing=false;
+function reset(next){connectionRun++;sourceGeneration++;frozenPeople=null;frozenRows=null;renderedRows=[];for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).disabled=false;stream?.close();stream=null;clearInterval(poll);clearInterval(demoTimer);clearTimeout(renderTimer);renderTimer=null;dirty=false;cursor='0';source=next;records=new Map();participants=new Map();datasets=new Map();room=null;selected=null;flashes.clear();extent=1600;lastReceived=null;renderedCount=0;frozen=false;syncing=false;
   lastSync=null;syncError='';streamState='Connecting…';text('#sync-now','Sync now');$('#sync-now').hidden=next!=='remote';text('#session-state','');text('#freeze','Freeze view');$('#source-banner').classList.toggle('simulation',next==='simulation');$('#session-controls').hidden=!['local','remote'].includes(next);
   for(const c of Object.values(charts))c.empty('Waiting for measurements.');$('#mosaic').innerHTML='';$('#mosaic-empty').hidden=false;text('#participant-count','0');text('#mosaic-count','0');text('#selected-path-title','Movement path');text('#selected-path-note','');text('#boundary-note','');text('#attempt-count','0');text('#error-count','—');text('#last-update','Nothing received yet');text('#fit-caption','Waiting for enough successful trials to fit a line.');text('#coverage','');
 }
 function receive(newRows,animate=true){let added=0;for(const r of newRows){if(!r||!r.id||!r.participant_id||!Number.isFinite(r.acquisition_ms))continue;if(records.has(id(r)))continue;
-  records.set(id(r),r);added++;const old=participants.get(r.participant_id)||{id:r.participant_id,label:r.participant_label||'Participant',device:r.device,count:0};old.count=(old.count||0)+1;if(!old.latest||r.created_at>=old.latest.created_at)old.latest=r;participants.set(r.participant_id,old);if(animate)flashes.add(r.participant_id);
+  records.set(id(r),r);added++;const old=participants.get(r.participant_id)||{id:r.participant_id,label:r.participant_label||'Participant',device:r.device,count:0};old.count=(old.count||0)+1;if(!old.latest||r.created_at>=old.latest.created_at)old.latest=r;participants.set(r.participant_id,old);const key=datasetKey(r),set=datasets.get(key)||{id:key,participantId:r.participant_id,label:datasetLabel(r),count:0};set.count++;if(!set.latest||r.created_at>=set.latest.created_at)set.latest=r;datasets.set(key,set);if(animate)flashes.add(key);
 }if(added){lastReceived=Date.now();if(frozen)text('#freeze',`Resume · ${records.size-renderedCount} new`);else schedule();}}
 function receivePerson(p){participants.set(p.id,{...participants.get(p.id),...p,count:participants.get(p.id)?.count||0});if(!frozen)schedule();}
 function labelSource(){text('#source-label',source==='simulation'?'Simulation':source==='local'?'Local rehearsal':source==='import'?'Imported session':'Classroom session');text('#source-detail',source==='simulation'?'Preview data is isolated from real sessions.':source==='local'?'Open the participant link in another tab of this browser profile.':source==='import'?'This view is not connected to a classroom.':'Measurements and saved results for the selected session.');text('#room-title',room?.title||'');}
 function acceptRoom(next){
   if(!next||room&&next.id===room.id&&(next.data_revision||0)<(room.data_revision||0))return;
   if(room&&next.id===room.id&&(next.data_revision||0)!==(room.data_revision||0)){
-    sourceGeneration++;records.clear();cursor='0';selected=null;lastReceived=null;renderedCount=0;extent=1600;
+    sourceGeneration++;records.clear();datasets.clear();cursor='0';selected=null;lastReceived=null;renderedCount=0;extent=1600;
     frozen=false;frozenPeople=null;frozenRows=null;renderedRows=[];flashes.clear();
     for(const p of participants.values()){p.count=0;delete p.latest;}
     for(const c of Object.values(charts))c.empty('No measurements since reset.');
@@ -50,18 +51,18 @@ function schedule(){dirty=true;if(renderTimer||rendering||frozen)return;renderTi
 function filterRows(){const task=$('#task-filter').value,noise=$('#noise-filter').value,device=$('#device-filter').value;return firstAttempts([...records.values()],{...(task==='all'?{}:{task}),perturbation:noise}).filter(r=>(device==='all'||r.device===device)&&Number.isFinite(r.index_difficulty)&&(r.task!=='interfaces'||/^buttons-|^(wide|tall)$/.test(r.variant)));}
 async function render(){
   if(frozen)return;const generation=sourceGeneration;const allRows=[...records.values()],allFirst=firstAttempts(allRows,{perturbation:'all'}),rs=filterRows();
-  text('#participant-count',participants.size);text('#mosaic-count',participants.size);text('#attempt-count',records.size.toLocaleString());text('#error-count',allFirst.length?`${(100*allFirst.filter(r=>!r.hit).length/allFirst.length).toFixed(1)}%`:'—');
+  text('#participant-count',participants.size);text('#mosaic-count',datasets.size);text('#attempt-count',records.size.toLocaleString());text('#error-count',allFirst.length?`${(100*allFirst.filter(r=>!r.hit).length/allFirst.length).toFixed(1)}%`:'—');
   text('#last-update',lastReceived?`Last received ${new Date(lastReceived).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`:'Nothing received yet');
   renderMosaic();
   if(rs.length){
     const means=conditionMeans(rs.filter(r=>r.hit)),field=axis,trend=trendlines(rs,field);
     const max=Math.max(...rs.map(r=>r.acquisition_ms));const nextExtent=Math.max(extent,Math.ceil(max/500)*500);
     const fitData=trend.lines,axisInfo=plotAxis(rs,axis);
-    const chartRows=displaySample(rs).map(r=>({...r,student_color:studentColor(r.participant_id),outcome:r.hit?'Hit':'Miss'})),data={trials:chartRows,means:means.map(r=>({...r,student_color:studentColor(r.participant_id)})),fit:fitData};
+    const chartRows=displaySample(rs).map(r=>({...r,dataset_id:datasetKey(r),student_color:studentColor(r.participant_id),outcome:r.hit?'Hit':'Miss'})),data={trials:chartRows,means:means.map(r=>({...r,dataset_id:datasetKey(r),student_color:studentColor(r.participant_id)})),fit:fitData};
     if(!charts.hero.result||nextExtent!==extent||charts.hero.spec.layer[0].encoding.x.field!==axis||charts.hero.spec.layer[0].encoding.x.scale.domain[1]!==axisInfo.maximum){extent=nextExtent;await charts.hero.set(heroSpec({extent,x:axis,xMax:axisInfo.maximum}),data);bindSelection();}else await charts.hero.update(data);
     if(generation!==sourceGeneration)return;
     focusStudent();renderedRows=rs;text('#fit-caption',trendCaption(trend,field)+' · pooled classroom observations');
-    text('#coverage',`${rs.length} first attempts in this view · ${new Set(rs.map(r=>r.participant_id)).size} participants · ${new Set(rs.map(r=>r.condition)).size} conditions${rs.length>5000?' · faint marks show a deterministic 5,000-observation sample; calculations use all rows':''}`);
+    text('#coverage',`${rs.length} first attempts in this view · ${new Set(rs.map(r=>r.participant_id)).size} students · ${new Set(rs.map(datasetKey)).size} runs · ${new Set(rs.map(r=>r.condition)).size} conditions${rs.length>5000?' · faint marks show a deterministic 5,000-observation sample; calculations use all rows':''}`);
   }else{charts.hero.empty('The selected task and condition have no observations yet.');text('#fit-caption','Waiting for enough successful trials to fit a line.');text('#coverage','');}
   const filteredAll=allRows.filter(r=>$('#device-filter').value==='all'||r.device===$('#device-filter').value);
   const boundaries=boundaryRows(filteredAll,$('#noise-filter').value);
@@ -69,15 +70,15 @@ async function render(){
   if(generation!==sourceGeneration)return;
   await renderSelectedPath();renderedCount=records.size;
 }
-function bindSelection(){charts.hero.result?.view.addSignalListener('selectedPerson',(_,v)=>{const ids=v?.participant_id;selected=Array.isArray(ids)?ids[0]||null:null;focusStudent();renderSelectedPath();renderMosaic();});}
+function bindSelection(){charts.hero.result?.view.addSignalListener('selectedPerson',(_,v)=>{const ids=v?.dataset_id;selected=Array.isArray(ids)?ids[0]||null:null;focusStudent();renderSelectedPath();renderMosaic();});}
 function focusStudent(){const view=charts.hero.result?.view;if(view)view.signal('focusStudent',selected||'').runAsync().catch(console.error);}
 function renderMosaic(){
-  const people=frozen&&frozenPeople?frozenPeople:participants;const grid=$('#mosaic');$('#mosaic-empty').hidden=people.size>0;
+  const people=frozen&&frozenPeople?frozenPeople:datasets;const grid=$('#mosaic');$('#mosaic-empty').hidden=people.size>0;
   // Stable insertion order; never re-sort people by speed or arrival frequency.
   for(const p of people.values()){
     let tile=[...grid.children].find(e=>e.dataset.person===p.id);
     if(!tile){tile=document.createElement('button');tile.className='person';tile.dataset.person=p.id;tile.setAttribute('aria-label',`Inspect ${p.label}`);const name=document.createElement('span');name.textContent=p.label;const canvas=document.createElement('canvas');canvas.width=150;canvas.height=80;const count=document.createElement('span');count.className='person-count';tile.append(name,canvas,count);tile.onclick=()=>{selected=selected===p.id?null:p.id;focusStudent();renderSelectedPath();renderMosaic();};grid.append(tile);}
-    tile.style.borderLeft='4px solid '+studentColor(p.id);tile.classList.toggle('selected',selected===p.id);tile.querySelector('.person-count').textContent=String(p.count||0);
+    tile.style.borderLeft='4px solid '+studentColor(p.participantId);tile.classList.toggle('selected',selected===p.id);tile.querySelector('.person-count').textContent=String(p.count||0);
     if(flashes.has(p.id)){tile.classList.remove('flash');void tile.offsetWidth;tile.classList.add('flash');}
     drawMini(tile.querySelector('canvas'),p.latest);
   }flashes.clear();
@@ -85,7 +86,7 @@ function renderMosaic(){
 function drawMini(canvas,r){const c=canvas.getContext('2d');c.clearRect(0,0,150,80);c.strokeStyle='#cbd1cb';c.lineWidth=1;c.beginPath();c.moveTo(12,40);c.lineTo(138,40);c.stroke();if(!r?.path?.length)return;
   const ps=pathRows([r]),d=Math.max(r.distance,1);c.strokeStyle=studentColor(r.participant_id);c.lineWidth=2;c.beginPath();ps.forEach((p,i)=>{const x=12+p.along*118,y=40+Math.max(-30,Math.min(30,p.across/d*100));i?c.lineTo(x,y):c.moveTo(x,y);});c.stroke();c.fillStyle='#387d87';c.beginPath();c.arc(130,40,3,0,2*Math.PI);c.fill();}
 async function renderSelectedPath(){
-  const people=frozen&&frozenPeople?frozenPeople:participants;let p=people.get(selected);if(!p?.latest)p=[...people.values()].filter(p=>p.latest).at(-1);
+  const people=frozen&&frozenPeople?frozenPeople:datasets;let p=people.get(selected);if(!p?.latest)p=[...people.values()].filter(p=>p.latest).at(-1);
   if(!p?.latest){charts.path.empty('Click a participant tile to inspect a movement.');return;}
   text('#selected-path-title',`${p.label} · latest movement`);const paths=pathRows([p.latest]);
   if(charts.path.result)await charts.path.update({paths});else await charts.path.set(pathSpec(),{paths});
@@ -156,7 +157,7 @@ $('#delete-room').onclick=async()=>{if(!room||prompt('This permanently deletes t
   try{if(source==='local'){const rs=await all('localClass');await removeMany('localClass',rs.filter(r=>r.room_id===room.id).map(r=>r.id));updateLocalRoom({status:'deleted'});reset('local');labelSource();setupRoomControls();}else{await auth.call('delete',{room_id:room.id});reset('remote');await loadCloud();}toast('Session deleted. Already-exported files and other browsers’ local copies are unchanged.');}catch(e){toast(e.message,true);}};
 $('#load-room').onclick=async()=>{const o=$('#room-list').selectedOptions[0];if(o?.dataset.room)await attachRemote(JSON.parse(o.dataset.room));};
 $('#copy-address').onclick=()=>copy($('#participant-address').href);
-$('#freeze').onclick=()=>{frozen=!frozen;frozenPeople=frozen?structuredClone(participants):null;frozenRows=frozen?renderedRows:null;for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).disabled=frozen;text('#freeze',frozen?'Resume display (collecting)':'Freeze view');if(!frozen)schedule();};
+$('#freeze').onclick=()=>{frozen=!frozen;frozenPeople=frozen?structuredClone(datasets):null;frozenRows=frozen?renderedRows:null;for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).disabled=frozen;text('#freeze',frozen?'Resume display (collecting)':'Freeze view');if(!frozen)schedule();};
 $('#present').onclick=async()=>{const on=document.body.classList.toggle('presenting');text('#present',on?'Exit presentation':'Present ⛶');try{if(on&&!document.fullscreenElement)await document.documentElement.requestFullscreen();else if(!on&&document.fullscreenElement)await document.exitFullscreen();}catch{/* The presentation layout works without browser fullscreen. */}setTimeout(()=>schedule(),100);};
 for(const q of ['#task-filter','#device-filter','#noise-filter'])$(q).onchange=()=>{selected=null;focusStudent();schedule();};
 async function axisTo(next){

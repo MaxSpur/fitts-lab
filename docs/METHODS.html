@@ -209,7 +209,7 @@ the successful observations, with misses displayed separately.</p>
 <p>Input mode, device, gain, perturbation, jitter amplitude, task, and
 application version define separate fit groups. Classroom lines pool
 successful first attempts within each group, so participants
-contributing more trials have more weight. Larger participant–condition
+contributing more trials have more weight. Larger student–run–condition
 mean markers still require at least three successful observations. These
 lines are descriptive; they do not estimate a causal effect or account
 for repeated measurements with a mixed-effects model.</p>
@@ -234,16 +234,16 @@ the approach for rectangles. Distance and Size fits are descriptive
 single-variable summaries; the other geometric variable is not held
 fixed. Axis limits follow the data. Fits are recomputed for the selected
 variable, including while the view is frozen.</p>
-<p>The boundary chart connects each participant within a matched pair,
+<p>The boundary chart connects each student run within a matched pair,
 protocol version, and consistent input settings. Only approaches to menu
 or window controls enter this comparison; the intervening button
 selections remain in the exported data. A bold summary line averages the
-participant means from complete free/edge pairs, with equal weight per
-participant and separate protocol/input groups. Its timing statistic is
-the mean of successful first attempts; point tooltips report the
-corresponding first-attempt error rate and sample size. It is a paired
-visualization, not an inferential effect estimate. No throughput is
-calculated from clamped endpoint variance.</p>
+run means from complete free/edge pairs, with equal weight per complete
+run and separate protocol/input groups. Its timing statistic is the mean
+of successful first attempts; point tooltips report the corresponding
+first-attempt error rate and sample size. It is a paired visualization,
+not an inferential effect estimate. No throughput is calculated from
+clamped endpoint variance.</p>
 <h2 id="interpretation-across-people">Interpretation across people</h2>
 <p>Different people, devices, scaling settings, posture, practice, and
 strategies produce different intercepts and slopes. Self-selected
@@ -279,4 +279,16 @@ API</a> and <a
 href="https://vega.github.io/vega-lite/docs/selection.html">Vega-Lite
 selections</a>.</li>
 </ul>
+<h2 id="repeating-the-exercise">Repeating the exercise</h2>
+<p>Completing each guided set in all three stages enables <strong>Start
+another run</strong>. Progress starts over with a new run ID and layout
+seed; existing trials, exports, pending uploads, and classroom
+membership remain intact. Classroom colors still identify students,
+while tiles and selection distinguish runs. The participant Run selector
+can display a single run or all saved runs.</p>
+<p>Condition means and boundary pairs are computed within a run.
+Classroom regressions still pool observations within protocol/input
+groups: students who repeat contribute more observations. Repeats are
+not additional independent students. Records made before run IDs were
+added appear as Earlier results.</p>
 <footer>Fitts Lab 1.1.1 · <a href="METHODS.md">Markdown source</a></footer></main></body></html>

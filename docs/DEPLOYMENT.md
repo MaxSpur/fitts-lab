@@ -292,3 +292,5 @@ Package documentation checked September 25, 2026. Dashboard labels and service l
 The session list updates status when a session ends; Ended/Expired sessions remain selectable for reviewing saved results. The status line distinguishes classroom admission from the live connection. A last-checked timestamp and **Sync now** show whether database reconciliation is working. Returning online or to the tab triggers recovery; Freeze affects rendering only.
 
 The production build versions application asset paths by content hash. Publish the complete `dist/` output so HTML, scripts, and styles use the same release even when browsers cache older files.
+
+For repeat runs (1.1.1), redeploy `classroom-api` before the frontend so ingress preserves optional `run_id` and `run_number`. They are stored in the existing trial JSON; no database migration is needed. Older clients and queued records without those fields remain accepted. The legacy room phase field can remain in the database; current clients ignore it.

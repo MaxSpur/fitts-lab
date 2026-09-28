@@ -20,6 +20,7 @@ export function validateTrial(r,maxPath=40){
     acquisition_ms:duration,completion_ms:r.hit?duration:null,input_mode:choice(r.input_mode,['virtual','native'],'input mode'),
     device:choice(r.device,['unspecified','mouse','trackpad','pen','other'],'device'),
     dpr:number(r.dpr,.25,8,'pixel ratio'),viewport_width:number(r.viewport_width,50,4096,'viewport width')};
+  if(r.run_id!==undefined||r.run_number!==undefined){result.run_id=uuid(r.run_id,'run ID');result.run_number=integer(r.run_number,1,10000,'run number');}
   for(const key of ['distance','nominal_distance','start_x','start_y','target_x','target_y','click_x','click_y'])result[key]=number(r[key],0,8192,key);
   for(const key of ['target_w','target_h','approach_width'])result[key]=number(r[key],.05,8192,key);
   if(['menu-edge','corner-edge'].includes(variant)&&result.input_mode!=='virtual')throw new Error('Simulated hard boundaries require a captured virtual cursor.');

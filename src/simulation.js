@@ -5,7 +5,7 @@ import {VERSION,protocol,targetFor,homeFor,BUTTON_SETS,isBoundary} from './proto
 export function simulationRows(nPeople=24,seed=28){
   const rand=seeded(seed),rows=[];
   for(let i=0;i<nPeople;i++){
-    const pid='simulation-'+i,a=100+rand()*180,b=70+rand()*90;
+    const runId=crypto.randomUUID(),pid='simulation-'+i,a=100+rand()*180,b=70+rand()*90;
     for(const task of ['horizontal','circles','interfaces'])for(const p of protocol(task,pid))for(let j=0;j<p.count;j++){
       const t=targetFor(p,j+1),h=homeFor(p,j),dx=t.x-h.x,dy=t.y-h.y,d=Math.hypot(dx,dy);
       const w=t.shape==='circle'?t.w:approachWidth(t.w,t.h,dx,dy),edge=isBoundary(p),id=edge?null:shannon(d,w);
@@ -14,7 +14,7 @@ export function simulationRows(nPeople=24,seed=28){
       const condition=task==='horizontal'?`horizontal-${Math.round(d)}-${p.width}`:
         task==='interfaces'&&!BUTTON_SETS.includes(p.variant)?`${p.variant}-${j%2?'between':'control'}`:p.condition;
       rows.push({schema_version:1,app_version:VERSION,id:crypto.randomUUID(),participant_id:pid,
-        participant_label:'DEMO '+String(i+1).padStart(2,'0'),source:'simulation',task,variant:p.variant,condition,
+        run_id:runId,run_number:1,participant_label:'DEMO '+String(i+1).padStart(2,'0'),source:'simulation',task,variant:p.variant,condition,
         set_id:`${pid}-${task}-${p.variant}-${p.block??p.width??''}`,movement_id:crypto.randomUUID(),target_index:j,attempt:1,
         practice:false,perturbation:'normal',gain:1,hit,distance:d,nominal_distance:d,target_w:t.w,target_h:t.h,
         approach_width:w,index_difficulty:id,acquisition_ms:mt,completion_ms:hit?mt:null,

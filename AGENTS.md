@@ -27,3 +27,5 @@ Classroom data reset uses `reset_fitts_room_data` and `rooms.data_revision`; upd
 Production builds put the application module graph and stylesheet under a content-hashed asset path to prevent mixed cached releases. Root copies remain available for notebook reuse. Publish `dist/`, not the source tree.
 
 Students choose their own stage; the legacy backend `phase` field is ignored. Plot axes share `plotAxis()` labels and bounds. Size uses approach width, with means grouped by protocol and input settings.
+
+`src/runs.js` owns repeat-run identity and completion. Trials optionally carry `run_id`/`run_number`; older records form an Earlier results dataset. Namespace datasets by participant and run, preserve membership/outbox/history on repeat, and keep condition means and boundary pair keys separated by run. Changing accepted run fields requires an Edge Function redeploy, not a SQL migration.

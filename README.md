@@ -79,3 +79,5 @@ The classroom view provides compact task and device filters, participant paths, 
 In the classroom’s **Session & participant link** controls, **Reset data…** clears classroom measurements after confirmation while keeping participants joined. Export any results you need first. Student-local copies remain, and queued uploads may arrive afterward.
 
 Results combine all stages using square/circle/diamond glyphs. The classroom assigns a color to each student; click a tile or point to highlight them. Session status distinguishes Open, Ended, and Expired; ended sessions retain results and briefly accept queued uploads. **Sync now** reconciles saved measurements immediately.
+
+After all three stages, **Start another run** begins a fresh dataset. Earlier results remain available in the Run selector and exports. In a classroom, repeats stay under the same student and appear as separate run tiles; no rejoining is needed. The instructor does not control student stages. Distance, Size, and Difficulty views are available on both pages.

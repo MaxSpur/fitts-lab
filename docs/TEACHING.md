@@ -42,3 +42,5 @@ The participant mosaic has stable positions. A tile pulses when new attempts arr
 Freeze stops visual updates while acquisition and synchronization continue. Resume incorporates the newly received records. The first-attempt error indicator is a reminder to interpret speed together with accuracy. The paired boundary chart compares each participant within the matched settings; because the free run always comes first, practice can also influence the difference.
 
 If connectivity fails, let students finish locally and export JSON. The instructor can later import an export as an explicitly disconnected snapshot. Do not present a simulated preview as the class's data; its banner and exports identify it as synthetic.
+
+Students who finish all stages can choose **Start another run**. The classroom shows another run tile under the same student label and color. Use the participant Run selector to review earlier work; repeats never erase it.

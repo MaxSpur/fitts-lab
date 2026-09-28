@@ -55,7 +55,7 @@ export function firstAttempts(rows,{task,perturbation='normal',hitsOnly=false}={
 }
 export function conditionMeans(rows) {
   const groups=new Map();
-  for(const r of rows) { const k=[r.participant_id,r.task,r.app_version,r.condition,r.device,r.perturbation,r.jitter_css_px,r.gain,r.input_mode].join('|'); if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r); }
+  for(const r of rows) { const k=[r.participant_id,r.run_id,r.task,r.app_version,r.condition,r.device,r.perturbation,r.jitter_css_px,r.gain,r.input_mode].join('|'); if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r); }
   return [...groups.values()].filter(a=>a.length>=3).map(a=>({...a[0],id:'mean-'+a[0].id,
     distance:mean(a.map(r=>r.distance)),approach_width:mean(a.map(r=>r.approach_width)),target_w:mean(a.map(r=>r.target_w)),target_h:mean(a.map(r=>r.target_h)),index_difficulty:mean(a.map(r=>r.index_difficulty).filter(Number.isFinite)),
     acquisition_ms:mean(a.map(r=>r.acquisition_ms)),n:a.length,kind:'Participant–condition mean'}));

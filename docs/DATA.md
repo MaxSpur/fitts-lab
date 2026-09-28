@@ -14,6 +14,7 @@ CSV is the compact analysis table. JSON contains the same records, sampled paths
 | `source` | Origin label: participant-side records, server-accepted classroom records, or explicitly synthetic simulation. Instructor top-level exports also record source mode. |
 | `id` | Unique attempt UUID. Server retries are deduplicated within participant. |
 | `participant_id`, `participant_label` | Random identity and display label. Server replaces client identity fields with its authenticated participant identity. |
+| `run_id`, `run_number` | Optional repeat-run UUID and ordinal within the student browser. A new run keeps the participant and classroom identities. Older records have neither field. |
 | `room_id` | Classroom UUID when shared; null for standalone records. |
 | `set_id`, `movement_id`, `target_index`, `attempt` | Set, target-activation sequence, zero-based completed-target index, and one-based press attempt. |
 | `task`, `variant`, `condition` | Task family (`horizontal`, `circles`, `interfaces`), target type, and condition key. Guided horizontal keys identify each designed distance and width. Guided menu/window keys distinguish approaches to a control (`-control`) from travel back to an ordinary button (`-between`). |

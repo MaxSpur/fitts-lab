@@ -1,3 +1,4 @@
+import {nextRun,completedStages} from './runs.js';
 import {CONFIG} from '../config.js';
 import {$,$$,text,toast,common,download,csv} from './ui.js';
 import {ArenaController} from './engine.js';
@@ -9,6 +10,7 @@ import {pathSpec,speedSpec,endpointsSpec,scatterSpec,boundarySpec} from './specs
 import {put,get,all,clear,saved,save,identity} from './storage.js';
 import {configured,api,localRoom,joinRoom,Outbox} from './network.js';
 common();
+let currentRun=saved('experiment-run',null);if(!currentRun||currentRun.version!==VERSION){currentRun=nextRun(currentRun);save('experiment-run',currentRun);save('progress',{});}
 const person=identity(),localLabel='P-'+person.slice(0,6).toUpperCase();
 let rows=[],sets=[],currentSet=null,task='horizontal',progress=saved('progress',{}),membership=null,joinCandidate=null;
 let refreshTimer=null,saveFailed=false,resultExtent=1600,resultAxis='index_difficulty';
@@ -27,12 +29,12 @@ function options(plan){
   const choice=$('#input-mode').value;
   const paired=plan.task==='interfaces'&&/^(menu|corner)-/.test(plan.variant);
   const inputMode=['menu-edge','corner-edge'].includes(plan.variant)?'virtual':choice==='auto'?(paired?'virtual':'native'):choice;
-  return{participantId:membership?.credential.participant_id||person,participantLabel:membership?.credential.participant_label||localLabel,roomId:membership?.room.id||null,
+  return{runId:currentRun.id,runNumber:currentRun.number,participantId:membership?.credential.participant_id||person,participantLabel:membership?.credential.participant_label||localLabel,roomId:membership?.room.id||null,
   perturbation:$('#jitter').checked?'jitter':'normal',jitter:3,gain:Number($('#gain').value),inputMode,
   device:$('#device').value,seed:hash(person+sets.length),dpr:devicePixelRatio||1};}
 function selectedPlan(){
-  const list=protocol(task,person),i=Math.min(progress[task]||0,list.length-1),p={...list[i]};
-  p.protocolVersion=VERSION;
+  const list=protocol(task,person+currentRun.id),i=Math.min(progress[task]||0,list.length-1),p={...list[i]};
+  p.protocolVersion=VERSION;p.guidedIndex=i;
   if($('#run-mode').value==='explore'){
     p.distance=Number($('#distance-control').value);p.width=Number($('#width-control').value);p.height=task==='horizontal'?300:Number($('#height-control').value);
     if(task==='interfaces')p.variant=$('#interface-variant').value;
@@ -42,14 +44,14 @@ function selectedPlan(){
     if(task==='interfaces'&&/^(menu|corner)-/.test(p.variant))p.positions=boundarySequence(p);
     else if(task==='interfaces')delete p.positions;
   }else if(task==='horizontal'){
-    const completed=sets.filter(s=>s.task==='horizontal'&&s.state==='complete'&&s.plan.width===p.width&&s.plan.block!==undefined&&s.plan.protocolVersion===VERSION).length;
-    p.layoutSeed=hash(`${person}-horizontal-${p.width}-${Math.floor(completed/3)}`);
+    const completed=sets.filter(s=>s.task==='horizontal'&&s.state==='complete'&&s.plan.width===p.width&&s.plan.block!==undefined&&s.plan.protocolVersion===VERSION&&s.options?.runId===currentRun.id).length;
+    p.layoutSeed=hash(`${person}-${currentRun.id}-horizontal-${p.width}-${Math.floor(completed/3)}`);
     p.positions=horizontalSequence(p.width,p.layoutSeed).slice(p.block*12,p.block*12+13);
   }else if(task==='interfaces'){
     const pair=p.variant.startsWith('menu')?'menu':p.variant.startsWith('corner')?'corner':p.variant;
-    const completed=sets.filter(s=>s.task==='interfaces'&&s.state==='complete'&&s.plan.protocolVersion===VERSION&&
+    const completed=sets.filter(s=>s.task==='interfaces'&&s.state==='complete'&&s.plan.protocolVersion===VERSION&&s.options?.runId===currentRun.id&&
       (BUTTON_SETS.includes(p.variant)?s.plan.variant===p.variant:s.plan.variant.startsWith(pair))).length;
-    p.layoutSeed=hash(`${person}-${pair}-${BUTTON_SETS.includes(p.variant)?completed:Math.floor(completed/2)}`);
+    p.layoutSeed=hash(`${person}-${currentRun.id}-${pair}-${BUTTON_SETS.includes(p.variant)?completed:Math.floor(completed/2)}`);
     p.positions=BUTTON_SETS.includes(p.variant)?buttonSequence(p.variant,p.layoutSeed):boundarySequence(p);
   }
   return p;
@@ -100,8 +102,8 @@ function onStatus(e){
   $('#distance-control').disabled=active||task==='interfaces';
   if(e.state==='paused'){saveCurrent('paused');scheduleCharts(true);}
 }
-function onComplete(e){saveCurrent('complete');if($('#run-mode').value==='guided'){progress[task]=(progress[task]||0)+1;save('progress',progress);}text('#start-button',nextLabel());historyOptions();scheduleCharts(true);}
-function nextLabel(){if($('#run-mode').value==='explore')return'Repeat these settings →';const list=protocol(task,person),i=progress[task]||0;
+function onComplete(e){saveCurrent('complete');if($('#run-mode').value==='guided'){progress[task]=(progress[task]||0)+1;save('progress',progress);}text('#start-button',nextLabel());historyOptions();updateRunControls();scheduleCharts(true);}
+function nextLabel(){if($('#run-mode').value==='explore')return'Repeat these settings →';const list=protocol(task,person+currentRun.id),i=progress[task]||0;
   if(i<list.length)return`Next set → ${planLabel(list[i])}`;const n=TASKS.indexOf(task);return n<2?`Continue → ${TASK_LABELS[TASKS[n+1]]}`:'All done → view your results';}
 function switchTask(next){task=next;if((progress[task]||0)>=protocol(task,person).length)progress[task]=0;
   $$('.task-tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.task===task)));
@@ -131,7 +133,7 @@ $('#apply-parameters').onclick=()=>prepare();
 for(const kind of ['distance','width','height'])$('#'+kind+'-control').oninput=()=>text('#'+kind+'-value',$('#'+kind+'-control').value);
 $('#retry-sync').onclick=()=>outbox.retry();
 function historyOptions(){const selected=$('#set-history').value;$('#set-history').innerHTML='<option value="current">Current set</option>';
-  for(const s of [...sets].reverse()){if(!s.completed&&!rows.some(r=>r.set_id===s.id))continue;const o=document.createElement('option');o.value=s.id;o.textContent=`${TASK_LABELS[s.task]} · ${planLabel(s.plan)} · ${s.completed}/${s.plan.count}${s.options.perturbation==='jitter'?' · jitter':''}`;$('#set-history').append(o);}
+  for(const s of [...sets].reverse()){if(!s.completed&&!rows.some(r=>r.set_id===s.id))continue;const o=document.createElement('option');o.value=s.id;o.textContent=`${TASK_LABELS[s.task]} · ${planLabel(s.plan)} · ${s.completed}/${s.plan.count}${s.options.perturbation==='jitter'?' · jitter':''}${s.options.runNumber?' · Run '+s.options.runNumber:''}`;$('#set-history').append(o);}
   $('#set-history').value=selected||'current';if(!$('#set-history').value)$('#set-history').value='current';
 }
 async function renderMini(){
@@ -142,23 +144,41 @@ async function renderMini(){
 }
 async function renderResults(){
   const perturbation=$('#result-condition').value;
-  const rs=firstAttempts(rows,{perturbation}).filter(r=>Number.isFinite(r.index_difficulty)&&(r.task!=='interfaces'||/^buttons-|^(wide|tall)$/.test(r.variant)));
+  const selectedRun=$('#result-run').value,runRows=selectedRun==='all'?rows:rows.filter(r=>(r.run_id||'legacy')===selectedRun);
+  const rs=firstAttempts(runRows,{perturbation}).filter(r=>Number.isFinite(r.index_difficulty)&&(r.task!=='interfaces'||/^buttons-|^(wide|tall)$/.test(r.variant)));
   if(rs.length){
     resultExtent=Math.max(resultExtent,Math.ceil(Math.max(...rs.map(r=>r.acquisition_ms))/500)*500);
     const trend=trendlines(rs,resultAxis);await charts.combined.set(scatterSpec({height:340,extent:resultExtent,x:resultAxis,xMax:plotAxis(rs,resultAxis).maximum}),{trials:rs,means:[],fit:trend.lines});
     text('#combined-summary',`${rs.length} first attempts · ${rs.filter(r=>!r.hit).length} misses · ${trendCaption(trend,resultAxis)}`);
   }else{charts.combined.empty('Complete some selections to compare stages here.');text('#combined-summary','');}
-  const br=boundaryRows(rows,perturbation);
-  if(br.length){await charts.interfaces.set(boundarySpec(),{boundaries:br});text('#interfaces-summary','Within each pair, the target sequence matches. The bold line averages complete participant pairs. Only control approaches are compared, and protocol versions stay separate. Current runs put free before edge, so practice may affect the difference.');}else charts.interfaces.empty('Complete a menu or window-edge set to start the matched comparison.');
+  const br=boundaryRows(runRows,perturbation);
+  if(br.length){await charts.interfaces.set(boundarySpec(),{boundaries:br});text('#interfaces-summary','Within each pair, the target sequence matches. The bold line averages complete run pairs. Only control approaches are compared, and protocol versions stay separate. Current runs put free before edge, so practice may affect the difference.');}else charts.interfaces.empty('Complete a menu or window-edge set to start the matched comparison.');
 }
 function scheduleCharts(full=false){if(refreshTimer&&!full)return;clearTimeout(refreshTimer);refreshTimer=setTimeout(async()=>{refreshTimer=null;try{await renderMini();if(full||!arena.active())await renderResults();}catch(e){toast('Chart update failed: '+e.message,true);}},full?30:650);}
 $$('[data-result-axis]').forEach(b=>b.onclick=()=>{resultAxis=b.dataset.resultAxis;$$('[data-result-axis]').forEach(q=>{q.classList.toggle('active',q===b);q.setAttribute('aria-pressed',String(q===b));});text('#result-axis-caption',plotAxis([],resultAxis).caption);renderResults();});
-$('#set-history').onchange=renderMini;$('#result-condition').onchange=renderResults;
+$('#set-history').onchange=renderMini;$('#result-condition').onchange=renderResults;$('#result-run').onchange=()=>{resultExtent=1600;renderResults();};
 $$('[data-chart-code]').forEach(b=>b.onclick=()=>charts[b.dataset.chartCode].code());
 $('#export-csv').onclick=()=>download('fitts-trials.csv',csv(rows),'text/csv;charset=utf-8');
-$('#export-json').onclick=()=>download('fitts-session.json',{schema_version:1,app_version:VERSION,source:'participant',exported_at:new Date().toISOString(),trials:rows,sets});
+$('#export-json').onclick=()=>download('fitts-session.json',{schema_version:1,app_version:VERSION,source:'participant',current_run:currentRun,exported_at:new Date().toISOString(),trials:rows,sets});
+function updateRunControls(){
+  const complete=completedStages(sets,currentRun).length;
+  text('#run-status',`Run ${currentRun.number} · ${complete}/3 stages complete`);
+  $('#new-run').hidden=complete!==3;
+  const select=$('#result-run'),value=select.value;
+  const runs=new Map([[currentRun.id,`Run ${currentRun.number} (current)`]]);
+  for(const r of [...rows].reverse())if(!runs.has(r.run_id||'legacy'))runs.set(r.run_id||'legacy',r.run_id?`Run ${r.run_number}`:'Earlier results');
+  select.innerHTML='<option value="all">All recorded runs</option>';
+  for(const [id,label]of runs){const o=document.createElement('option');o.value=id;o.textContent=label;select.append(o);}
+  select.value=runs.has(value)||value==='all'?value:currentRun.id;
+}
+$('#new-run').onclick=()=>{
+  if(completedStages(sets,currentRun).length!==3)return;
+  arena.pause('New run');currentRun=nextRun(currentRun);save('experiment-run',currentRun);progress={};save('progress',progress);
+  updateRunControls();$('#result-run').value=currentRun.id;resultExtent=1600;switchTask('horizontal');renderResults();
+  $('#experiment').scrollIntoView({behavior:'smooth'});toast(`Run ${currentRun.number} is ready. Earlier results are saved.`);
+};
 $('#clear-data').onclick=async()=>{if(!confirm('Clear all participant trials and set history in this browser? Export first. Pending uploads will also be removed. The instructor’s stored copy is unchanged.'))return;
-  arena.pause('Cleared local history');for(const store of ['trials','sets','outbox'])await clear(store);rows=[];sets=[];progress={};save('progress',progress);prepare();renderResults();outbox.status();};
+  arena.pause('Cleared local history');for(const store of ['trials','sets','outbox'])await clear(store);rows=[];sets=[];progress={};save('progress',progress);updateRunControls();prepare();renderResults();outbox.status();};
 function limit(){const near=Number($('#near-slider').value),far=$('#infinite-toggle').checked?Infinity:Number($('#far-slider').value),x=20+near/1800*390,end=far===Infinity?432:20+far/1800*390;
   $('#edge-rect').setAttribute('x',x);$('#edge-rect').setAttribute('width',end-x);$('#near-label').setAttribute('x',x);$('#near-label').textContent=`near ${near}`;$('#far-label').setAttribute('x',Math.min(end,390));$('#far-label').textContent=far===Infinity?'far → ∞':`far ${far}`;$('#infinity-symbol').toggleAttribute('hidden',far!==Infinity);$('#far-slider').disabled=far===Infinity;
   text('#limit-value',far===Infinity?`Original-formula ID → 0 bits · Shannon ID → ${nearFar(near,far,'shannon').toFixed(3)} bits`:
@@ -201,12 +221,12 @@ setInterval(async()=>{
 for(const q of ['device','jitter','gain']){const v=saved(q,null);if(v!==null){if(q==='jitter')$('#'+q).checked=v;else $('#'+q).value=v;}}
 $('#input-mode').value='auto';
 const prior=saved('active-membership',null);if(prior&&(prior.credential.source==='local'?localRoom()?.id===prior.room.id:configured()))membership=prior;
-updateMembership();prepare();renderResults();historyOptions();
+updateMembership();updateRunControls();prepare();renderResults();historyOptions();
 $('#mobile-warning').hidden=matchMedia('(pointer:fine)').matches;
 // Recover an incomplete set, with an unscored restart, after a refresh.
 const incomplete=[...sets].reverse().find(s=>s.task===task&&s.state!=='complete'&&s.completed>0&&s.plan&&s.options&&
   s.options.roomId===(membership?.room.id||null)&&s.options.inputMode===options(s.plan).inputMode&&
-  (s.plan.protocolVersion===VERSION)&&
+  (s.plan.protocolVersion===VERSION)&&s.options.runId===currentRun.id&&
   (s.task!=='horizontal'||s.plan.positions?.length===s.plan.count+1||s.plan.custom&&s.plan.count===12));
 if(incomplete){prepare(incomplete.plan,incomplete);toast('Recovered an unfinished set. Resume with an unscored starting click.');}
 window.addEventListener('beforeunload',e=>{if(arena.active()){e.preventDefault();e.returnValue='';}});

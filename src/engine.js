@@ -30,7 +30,7 @@ export class TrialEngine {
       `horizontal-${Math.round(nominal)}-${this.plan.width}`:this.plan.task==='interfaces'&&!this.plan.custom&&/^(menu|corner)-/.test(this.plan.variant)&&this.plan.positions?
       `${this.plan.variant}-${this.count%2?'between':'control'}`:this.plan.condition;
     const r={schema_version:1,source:'participant',app_version:VERSION,id:crypto.randomUUID(),set_id:this.id,movement_id:this.movementId,
-      participant_id:o.participantId,participant_label:o.participantLabel,room_id:o.roomId||null,
+      ...(o.runId?{run_id:o.runId,run_number:o.runNumber}:{}),participant_id:o.participantId,participant_label:o.participantLabel,room_id:o.roomId||null,
       task:this.plan.task,variant:this.plan.variant,condition,target_index:this.count,attempt:this.attempt,
       hit:ok,practice:!!o.practice,perturbation:o.perturbation,jitter_css_px:o.perturbation==='jitter'?o.jitter:0,gain:o.gain,seed:o.seed,
       distance:round(d*s),nominal_distance:round(nominal*s),target_w:round(t.w*s),target_h:round(t.h*s),
