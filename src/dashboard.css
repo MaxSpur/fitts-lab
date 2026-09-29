@@ -1,0 +1,42 @@
+/* Shared analytical workspace. Scoped so the participant experiment is unchanged. */
+#dashboard{padding:0 0 16px;overflow-anchor:none}
+#dashboard h2{font-size:20px;margin:0 0 8px}
+#dashboard h3{font-size:14px}
+#dashboard .study-top{display:grid;grid-template-columns:minmax(0,1fr) 265px;gap:12px;align-items:start}
+#dashboard .chart-card{padding:12px;min-width:0}
+#dashboard .study-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 6px}
+#dashboard .study-toolbar label{display:flex;align-items:center;gap:5px;font-size:11px}
+#dashboard .study-toolbar select{width:auto;margin:0;padding:5px;font-size:12px}
+#dashboard .study-range input{width:105px;margin:0}
+#dashboard .study-range output{min-width:48px;font:11px ui-monospace,monospace}
+#dashboard .study-key{font-size:11px;line-height:1.4;color:var(--muted);margin:5px 0}
+#dashboard .chart{min-height:0;line-height:0}
+#dashboard .chart .empty-chart{min-height:140px;line-height:1.4}
+#dashboard .chart canvas,#dashboard .vega-embed{display:block}
+#dashboard #stage-charts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#dashboard .stage-panel{min-width:0}
+#dashboard .activity-list{max-height:350px;margin:8px 0}
+#dashboard .activity-run{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:7px 5px}
+#dashboard .activity-run strong{font-size:10px;overflow:hidden;text-overflow:ellipsis}
+#dashboard .activity-run span{font:10px ui-monospace,monospace;white-space:nowrap}
+#dashboard .study-boundaries{margin-top:18px}
+#dashboard .study-pairs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+#dashboard .effect-headline{font-size:15px;font-weight:600;line-height:1.4;margin:8px 0;color:var(--ink)}
+#dashboard .effect-help{min-height:32px}
+#dashboard .study-report{background:white;border:1px solid var(--line);padding:20px;margin:18px 0 10px;font-size:13px;line-height:1.6}
+#dashboard .study-report h3{margin-top:20px}
+#dashboard .study-report p{max-width:105ch;margin-bottom:10px}
+#dashboard .study-notice{border-left:3px solid #397aac;padding:8px 12px;background:#f2f6f8}
+#dashboard .study-table-wrap{overflow-x:auto;margin:10px 0}
+#dashboard table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+#dashboard th,#dashboard td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);vertical-align:top}
+#dashboard th:first-child,#dashboard td:first-child{text-align:left;min-width:170px}
+#dashboard th{font-weight:600;background:#f7f8f6}
+#dashboard details{padding:10px 0}
+#dashboard summary{font-weight:600}
+#dashboard #analysis-source{line-height:1.55;max-height:420px;font-size:11px}
+.overview-link{font-size:12px;font-weight:600;align-self:center;padding:5px 8px}
+#publication-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media(max-width:1120px){#dashboard #stage-charts{grid-template-columns:1fr}#dashboard .study-pairs{grid-template-columns:1fr}}
+@media(max-width:760px){#dashboard .study-top{grid-template-columns:1fr}#dashboard .activity-card{order:2}#dashboard .study-report{padding:12px}#dashboard .activity-list{max-height:200px}}
+@media print{#dashboard .study-toolbar,#dashboard .code-link,#publication-controls{display:none}#dashboard .study-top,#dashboard .study-pairs{display:block}#dashboard .chart-card{break-inside:avoid}}

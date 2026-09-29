@@ -4,3 +4,7 @@ project_id = "fitts-lab"
 # This function has public status/join endpoints and custom participant credentials.
 # EVERY privileged action is separately authorized inside the handler.
 verify_jwt = false
+
+[functions.results-api]
+# Published snapshots are public; publication writes verify instructor ownership.
+verify_jwt = false

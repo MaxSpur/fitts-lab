@@ -11,6 +11,7 @@ export function csv(rows){const cell=v=>{let s=v==null?'':String(v);if(/^[=+@\t\
 export async function copy(s){try{await navigator.clipboard.writeText(s);toast('Copied.');}catch{toast('Clipboard unavailable. Use the download button instead.',true);}}
 export function showCode(spec){const modal=$('#code-dialog');$('#code-text').textContent=JSON.stringify(spec,null,2);$('#download-spec').onclick=()=>download('chart.vl.json',spec);$('#copy-spec').onclick=()=>copy(JSON.stringify(spec,null,2));modal.showModal();}
 export function common(){
+  if(!document.body.classList.contains('dashboard'))import('./overview-link.js').catch(()=>{});
   document.querySelectorAll('[data-close-dialog]').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
   document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d && (e.clientX<d.getBoundingClientRect().left||e.clientX>d.getBoundingClientRect().right||e.clientY<d.getBoundingClientRect().top||e.clientY>d.getBoundingClientRect().bottom))d.close();}));
   window.addEventListener('unhandledrejection',e=>{console.error(e.reason);toast('An operation failed. Your completed trials remain in the local history. '+(e.reason?.message||''),true);});
