@@ -49,7 +49,8 @@ function setupRoomControls(){
   $('#end-room').disabled=!state.open;$('#delete-room').disabled=!room;$('#reset-data').disabled=!room;$('#room-list').closest('div').hidden=source==='local';$('#capacity').closest('label').hidden=source==='local';
 }
 function schedule(){dirty=true;if(renderTimer||rendering||frozen)return;renderTimer=setTimeout(async()=>{renderTimer=null;if(!dirty||frozen)return;dirty=false;rendering=true;try{await render();}catch(e){toast('Chart update failed: '+e.message,true);console.error(e);}finally{rendering=false;if(dirty)schedule();}},450);}
-function acquisitionCutoff(){const value=$('#outlier-filter').value;return value==='all'?Infinity:Number(value);}
+function acquisitionCutoff(){const el=$('#outlier-filter'),value=Number(el.value);return value>=Number(el.max)?Infinity:value;}
+function updateCutoffLabel(){const cutoff=acquisitionCutoff();text('#outlier-value',Number.isFinite(cutoff)?`${Number((cutoff/1000).toFixed(2))} s`:'All');}
 function withinCutoff(r,cutoff=acquisitionCutoff()){return !Number.isFinite(cutoff)||r.acquisition_ms<=cutoff;}
 function heroRows(allRows=[...records.values()]){const task=$('#task-filter').value,noise=$('#noise-filter').value;return firstAttempts(allRows,{...(task==='all'?{}:{task}),perturbation:noise}).filter(r=>Number.isFinite(r.index_difficulty)&&!/-edge$/.test(r.variant));}
 function filterRows(allRows=[...records.values()]){const cutoff=acquisitionCutoff(),eligible=heroRows(allRows),rows=eligible.filter(r=>withinCutoff(r,cutoff));return{rows,hidden:eligible.length-rows.length,cutoff};}
@@ -60,22 +61,25 @@ async function render(){
   text('#last-update',lastReceived?`Last received ${new Date(lastReceived).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`:'Nothing received yet');
   renderMosaic();
   if(rs.length){
-    const means=conditionMeans(rs.filter(r=>r.hit)),field=axis,trend=trendlines(rs,field);
-    const max=Math.max(...rs.map(r=>r.acquisition_ms));const nextExtent=Math.max(extent,Math.ceil(max/500)*500);
-    const fitData=trend.lines,axisInfo=plotAxis(rs,axis);
-    const chartRows=displaySample(rs).map(r=>({...r,dataset_id:datasetKey(r),student_color:studentColor(r.participant_id),outcome:r.hit?'Hit':'Miss'})),data={trials:chartRows,means:means.map(r=>({...r,dataset_id:datasetKey(r),student_color:studentColor(r.participant_id)})),fit:fitData};
-    if(!charts.hero.result||nextExtent!==extent||charts.hero.spec.layer[0].encoding.x.field!==axis||charts.hero.spec.layer[0].encoding.x.scale.domain[1]!==axisInfo.maximum){extent=nextExtent;await charts.hero.set(heroSpec({extent,x:axis,xMax:axisInfo.maximum}),data);bindSelection(charts.hero);}else await charts.hero.update(data);
+    const means=conditionMeans(rs.filter(r=>r.hit)),field=axis,trend=trendlines(rs,field),focusedRows=selected?rs.filter(r=>datasetKey(r)===selected):[],scaleRows=focusedRows.length?focusedRows:rs,focused=focusedRows.length>0;
+    const max=Math.max(...scaleRows.map(r=>r.acquisition_ms)),step=focused?250:500;const nextExtent=Math.max(focused?500:1600,Math.ceil(max*(focused?1.1:1)/step)*step);
+    const fitData=trend.lines,selectedTrend=focused?trendlines(focusedRows,field):{lines:[],fits:[]},selectedColor=focused?studentColor(focusedRows[0].participant_id):null,selectedFit=selectedTrend.lines.map(r=>({...r,student_color:selectedColor})),axisInfo=plotAxis(scaleRows,axis);
+    const chartRows=displaySample(rs).map(r=>({...r,dataset_id:datasetKey(r),student_color:studentColor(r.participant_id),outcome:r.hit?'Hit':'Miss'})),data={trials:chartRows,means:means.map(r=>({...r,dataset_id:datasetKey(r),student_color:studentColor(r.participant_id)})),fit:fitData,selectedFit};
+    if(!charts.hero.result||nextExtent!==extent||charts.hero.spec.layer[0].encoding.x.field!==axis||charts.hero.spec.layer[0].encoding.x.scale.domain[1]!==axisInfo.maximum){extent=nextExtent;await charts.hero.set(heroSpec({height:270,extent,x:axis,xMax:axisInfo.maximum}),data);bindSelection(charts.hero);}else await charts.hero.update(data);
     if(generation!==sourceGeneration)return;
     focusStudent();renderedRows=rs;text('#fit-caption',trendCaption(trend,field)+' · pooled classroom observations');
-    const cutoffNote=filtered.hidden?` · ${filtered.hidden} ${filtered.hidden===1?'trial':'trials'} over ${filtered.cutoff/1000} s hidden from plots and fits; exports keep all data`:'';
-    text('#coverage',`${rs.length} first attempts in this view · ${new Set(rs.map(r=>r.participant_id)).size} students · ${new Set(rs.map(datasetKey)).size} runs · ${new Set(rs.map(r=>r.condition)).size} conditions${cutoffNote}${rs.length>5000?' · faint marks show a deterministic 5,000-observation sample; calculations use all visible rows':''}`);
+    const cutoffNote=filtered.hidden?` · ${filtered.hidden} slow ${filtered.hidden===1?'trial':'trials'} hidden`:'';
+    text('#coverage',focused?`${rs.length} visible first attempts · ${focusedRows.length} in selected run${cutoffNote}`:`${rs.length} visible first attempts · ${new Set(rs.map(r=>r.participant_id)).size} students${cutoffNote}`);
   }else{charts.hero.empty('The selected task and condition have no observations yet.');text('#fit-caption','Waiting for enough successful trials to fit a line.');text('#coverage','');}
-  const noise=$('#noise-filter').value,boundaries=boundaryRows(allRows,noise,filtered.cutoff),boundaryHidden=boundaryOutlierCount(allRows,noise,filtered.cutoff);
-  if(boundaries.length){if(charts.boundary.result)await charts.boundary.update({boundaries});else{await charts.boundary.set(boundarySpec(),{boundaries});bindSelection(charts.boundary);}const cutoffText=boundaryHidden?` ${boundaryHidden} successful ${boundaryHidden===1?'trial':'trials'} over ${filtered.cutoff/1000} s ${boundaryHidden===1?'is':'are'} omitted from the timing means; error rates still use all first attempts.`:'';text('#boundary-note','Successful first attempts.'+cutoffText+' Free runs precede bounded runs; practice may affect the difference.');focusStudent();}else{charts.boundary.empty('Interface measurements will appear here.');text('#boundary-note',boundaryHidden?`${boundaryHidden} successful boundary ${boundaryHidden===1?'trial':'trials'} ${boundaryHidden===1?'is':'are'} above the ${filtered.cutoff/1000} s cutoff. Choose Show all times to inspect the unfiltered comparison.`:'');}
+  const noise=$('#noise-filter').value,boundaries=boundaryRows(allRows,noise,filtered.cutoff),boundaryHidden=boundaryOutlierCount(allRows,noise,filtered.cutoff),focusedBoundaries=selected?boundaries.filter(r=>r.dataset_id===selected):[];
+  if(boundaries.length){const boundaryMax=focusedBoundaries.length?Math.max(...focusedBoundaries.map(r=>r.acquisition_ms)):null,boundaryYMax=boundaryMax===null?null:Math.max(500,Math.ceil(boundaryMax*1.1/250)*250),scaleKey=`${focusedBoundaries.length?selected:'all'}:${boundaryYMax??'auto'}`;
+    if(!charts.boundary.result||charts.boundary._scaleKey!==scaleKey){charts.boundary._scaleKey=scaleKey;await charts.boundary.set(boundarySpec({height:185,yMax:boundaryYMax}),{boundaries});bindSelection(charts.boundary);}else await charts.boundary.update({boundaries});
+    text('#boundary-note',boundaryHidden?`${boundaryHidden} slow successful boundary ${boundaryHidden===1?'trial':'trials'} omitted from timing means`:'' );focusStudent();
+  }else{charts.boundary.empty('Interface measurements will appear here.');text('#boundary-note',boundaryHidden?`${boundaryHidden} boundary ${boundaryHidden===1?'trial':'trials'} above the cutoff`:'' );}
   if(generation!==sourceGeneration)return;
   await renderSelectedPath();renderedCount=records.size;
 }
-function bindSelection(chart){chart.result?.view.addSignalListener('selectedPerson',(_,v)=>{const ids=v?.dataset_id;selected=Array.isArray(ids)?ids[0]||null:null;focusStudent();renderSelectedPath();renderMosaic();});}
+function bindSelection(chart){chart.result?.view.addSignalListener('selectedPerson',(_,v)=>{const ids=v?.dataset_id;selected=Array.isArray(ids)?ids[0]||null:null;extent=0;focusStudent();renderSelectedPath();renderMosaic();schedule();});}
 function focusStudent(){const hero=charts.hero.result?.view;if(hero)hero.signal('focusStudent',selected||'').runAsync().catch(console.error);const boundary=charts.boundary.result?.view;if(boundary){const rows=charts.boundary.rows.boundaries||[],focus=selected&&rows.some(r=>r.dataset_id===selected)?selected:'';boundary.signal('focusStudent',focus).runAsync().catch(console.error);}}
 function renderMosaic(){
   const runs=activityRuns(frozen&&frozenActivity?frozenActivity:[...records.values()]);
@@ -94,7 +98,7 @@ function renderMosaic(){
     let row=[...grid.children].find(e=>e.dataset.person===run.id);
     if(!row){row=document.createElement('button');row.className='activity-run';row.dataset.person=run.id;
       row.append(...['run-name','run-counts','run-latest'].map(className=>{const e=document.createElement('span');e.className=className;return e;}));
-      row.onclick=()=>{selected=selected===run.id?null:run.id;focusStudent();renderSelectedPath();renderMosaic();};grid.append(row);}
+      row.onclick=()=>{selected=selected===run.id?null:run.id;extent=0;focusStudent();renderSelectedPath();renderMosaic();schedule();};grid.append(row);}
     row.style.setProperty('--student-color',studentColor(run.participantId));row.classList.toggle('selected',selected===run.id);row.setAttribute('aria-pressed',String(selected===run.id));
     row.querySelector('.run-name').textContent=run.label;
     row.querySelector('.run-counts').textContent=`□ ${run.stages.horizontal}   ○ ${run.stages.circles}   ◇ ${run.stages.interfaces}`;
@@ -106,18 +110,18 @@ function renderMosaic(){
   const waiting=[...joined.values()].filter(p=>!contributors.has(p.id));
   text('#waiting-students',waiting.length?`${waiting.length} awaiting first result: ${waiting.slice(0,6).map(p=>p.label||'Participant').join(', ')}${waiting.length>6?'…':''}`:'');
   const chosen=runs.find(r=>r.id===selected),detail=$('#run-detail');detail.hidden=!chosen;$('#clear-selection').hidden=!chosen;detail.replaceChildren();
-  if(chosen){const name=document.createElement('strong'),stats=document.createElement('p');name.textContent=chosen.label;stats.textContent=`${chosen.median===null?'—':Math.round(chosen.median)+' ms'} median · ${chosen.errorRate===null?'—':Math.round(chosen.errorRate*100)+'%'} misses · ${chosen.first} first attempts`;detail.append(name,stats);const note=document.createElement('span');note.textContent='Median of successful first attempts, across stages. Latest path below.';detail.append(note);}
+  if(chosen){const name=document.createElement('strong'),stats=document.createElement('p');name.textContent=chosen.label;stats.textContent=`${chosen.median===null?'—':Math.round(chosen.median)+' ms'} median · ${chosen.errorRate===null?'—':Math.round(chosen.errorRate*100)+'%'} misses · ${chosen.first} first attempts`;detail.append(name,stats);}
   flashes.clear();
 }
-$('#clear-selection').onclick=()=>{selected=null;focusStudent();renderSelectedPath();renderMosaic();};
+$('#clear-selection').onclick=()=>{selected=null;extent=0;focusStudent();renderSelectedPath();renderMosaic();schedule();};
 async function renderSelectedPath(){
   const sourceRows=frozen&&frozenActivity?frozenActivity:[...records.values()],activity=activityRuns(sourceRows);let p=activity.find(r=>r.id===selected);if(!p?.latest){const latest=sourceRows.filter(r=>!r.practice).at(-1);p=latest?activity.find(r=>r.id===datasetKey(latest)):null;}
   if(!p?.latest){charts.path.empty('Select a student run to inspect its recent movements.');return;}
   const runRows=sourceRows.filter(r=>!r.practice&&datasetKey(r)===p.id),recent=runRows.slice(-12);
   if(!recent.length){charts.path.empty('No movement paths are available for this run.');return;}
   const n=recent.length,last=recent.at(-1);text('#selected-path-title',`${p.label} · latest ${n} ${n===1?'movement':'movements'}`);const paths=pathRows(recent,12);
-  if(charts.path.result)await charts.path.update({paths});else await charts.path.set(pathSpec(),{paths});
-  text('#selected-path-note',`${TASK_LABELS[last.task]} latest · ${n} overlaid ${n===1?'attempt':'attempts'} from this run · latest ${Math.round(last.acquisition_ms)} ms · ${last.hit?'hit':'miss'}${last.attempt>1?' · retry':''} · raw paths are unaffected by the time cutoff`);
+  if(charts.path.result)await charts.path.update({paths});else await charts.path.set(pathSpec(185),{paths});
+  text('#selected-path-note',`${TASK_LABELS[last.task]} · ${n} overlaid · latest ${Math.round(last.acquisition_ms)} ms · ${last.hit?'hit':'miss'}${last.attempt>1?' · retry':''}`);
 }
 function showConnection(){
   if(source!=='remote')return;
@@ -186,14 +190,17 @@ $('#load-room').onclick=async()=>{const o=$('#room-list').selectedOptions[0];if(
 $('#copy-address').onclick=()=>copy($('#participant-address').href);
 $('#freeze').onclick=()=>{frozen=!frozen;frozenPeople=frozen?structuredClone(participants):null;frozenActivity=frozen?[...records.values()]:null;frozenRows=frozen?renderedRows:null;for(const q of chartControls)$(q).disabled=frozen;text('#freeze',frozen?'Resume display (collecting)':'Freeze view');if(!frozen)schedule();};
 $('#present').onclick=async()=>{const on=document.body.classList.toggle('presenting');text('#present',on?'Exit presentation':'Present ⛶');try{if(on&&!document.fullscreenElement)await document.documentElement.requestFullscreen();else if(!on&&document.fullscreenElement)await document.exitFullscreen();}catch{/* The presentation layout works without browser fullscreen. */}setTimeout(()=>schedule(),100);};
-for(const q of chartControls)$(q).onchange=()=>{selected=null;extent=1600;focusStudent();schedule();};
+for(const q of ['#task-filter','#noise-filter'])$(q).onchange=()=>{selected=null;extent=0;focusStudent();schedule();};
+const cutoffControl=$('#outlier-filter'),savedCutoff=Number(saved('classroom-outlier-ms',5000));cutoffControl.value=String(Number.isFinite(savedCutoff)?Math.max(Number(cutoffControl.min),Math.min(Number(cutoffControl.max),savedCutoff)):5000);updateCutoffLabel();
+cutoffControl.oninput=()=>{save('classroom-outlier-ms',Number(cutoffControl.value));extent=0;updateCutoffLabel();schedule();};
 async function axisTo(next){
   if(axis===next)return;axis=next;
   $$('[data-axis]').forEach(b=>{b.classList.toggle('active',b.dataset.axis===axis);b.setAttribute('aria-pressed',String(b.dataset.axis===axis));});
   text('#axis-caption',plotAxis([],axis).caption);
   if(frozen&&charts.hero.result){
-    const rows=frozenRows||[],trend=trendlines(rows,axis),data={...charts.hero.rows,fit:trend.lines};
-    await charts.hero.set(heroSpec({extent,x:axis,xMax:plotAxis(rows,axis).maximum}),data);bindSelection(charts.hero);focusStudent();text('#fit-caption','Frozen · '+trendCaption(trend,axis));
+    const rows=frozenRows||[],focusedRows=selected?rows.filter(r=>datasetKey(r)===selected):[],scaleRows=focusedRows.length?focusedRows:rows,trend=trendlines(rows,axis),selectedTrend=focusedRows.length?trendlines(focusedRows,axis):{lines:[]},selectedColor=focusedRows.length?studentColor(focusedRows[0].participant_id):null,max=Math.max(0,...scaleRows.map(r=>r.acquisition_ms)),step=focusedRows.length?250:500;
+    extent=Math.max(focusedRows.length?500:1600,Math.ceil(max*(focusedRows.length?1.1:1)/step)*step);const data={...charts.hero.rows,fit:trend.lines,selectedFit:selectedTrend.lines.map(r=>({...r,student_color:selectedColor}))};
+    await charts.hero.set(heroSpec({height:270,extent,x:axis,xMax:plotAxis(scaleRows,axis).maximum}),data);bindSelection(charts.hero);focusStudent();text('#fit-caption','Frozen · '+trendCaption(trend,axis));
   }else schedule();
 }
 $$('[data-axis]').forEach(b=>b.onclick=()=>axisTo(b.dataset.axis));

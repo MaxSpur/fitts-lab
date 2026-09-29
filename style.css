@@ -147,3 +147,21 @@ body:not(.dashboard) .chart-grid .chart-title{margin:0;min-height:20px}
 @media(max-width:720px){body:not(.dashboard) .workbench{grid-template-columns:1fr;gap:0}body:not(.dashboard) .controls{padding:6px 0;border-left:0}body:not(.dashboard) .stage-body{width:100%}body:not(.dashboard) .feedback-heading select{max-width:230px}.geometry-editor svg text{font-size:15px}}
 
 #reset-dialog .actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Classroom projector: keep the analytical panels dense and selection-focused. */
+.dashboard-grid{align-items:start}
+.dashboard-results{min-width:0;display:flex;flex-direction:column;gap:10px}
+.dashboard .chart-card{padding:10px}
+.dashboard-bottom{margin-top:0;gap:10px;align-items:start;grid-template-columns:1.15fr 1fr}
+.dashboard .dashboard-bottom .chart{min-height:0}
+.dashboard .fit-caption{display:none}
+.dashboard #coverage,.dashboard #boundary-note,.dashboard #selected-path-note{font-size:10px;line-height:1.35;margin:3px 0 0;color:var(--muted)}
+.dashboard #boundary-note:empty,.dashboard #selected-path-note:empty,.dashboard #coverage:empty{display:none}
+.dashboard .run-detail{padding:6px 0}
+.dashboard .run-detail p{margin:3px 0 0}
+.dashboard .export-bar{margin:8px 0}
+.dashboard .disclosure{margin:10px 0 16px;padding-top:10px}
+.outlier-control{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px;white-space:nowrap;padding:0 2px}
+.dashboard .outlier-control input{display:block;width:105px;margin:0;padding:0}
+.outlier-control output{min-width:30px;font:11px ui-monospace,monospace;color:var(--ink);text-align:right}
+@media(max-width:720px){.dashboard-results{gap:8px}.dashboard-bottom{gap:8px}.dashboard .outlier-control input{width:90px}}

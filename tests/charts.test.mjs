@@ -33,3 +33,6 @@ for(const name of ['scatterSpec','heroSpec'])test(`${name} keeps point glyphs se
 });
 
 test('boundary chart exposes the shared run focus and selection signals',()=>{const spec=specs.boundarySpec();assert.ok(spec.params.some(p=>p.name==='focusStudent'));assert.equal(spec.layer[2].params[0].name,'selectedPerson');assert.match(spec.layer[1].encoding.opacity.condition.test,/dataset_id/);assert.match(spec.layer[2].encoding.opacity.condition.test,/dataset_id/);});
+
+test('classroom hero overlays selected-run fits without changing the participant scatter',()=>{const classroom=specs.heroSpec(),participant=specs.scatterSpec();assert.equal(classroom.layer.filter(l=>l.data?.name==='selectedFit').length,2);assert.equal(participant.layer.filter(l=>l.data?.name==='selectedFit').length,0);});
+test('boundary chart accepts a focused y-domain',()=>{const spec=specs.boundarySpec({height:185,yMax:1250});assert.equal(spec.height,185);for(const layer of spec.layer)assert.deepEqual(layer.encoding.y.scale.domain,[0,1250]);});
