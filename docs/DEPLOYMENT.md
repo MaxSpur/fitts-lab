@@ -298,3 +298,9 @@ For repeat runs (1.1.1), redeploy `classroom-api` before the frontend so ingress
 The 1.2.0 shorter randomized protocol and chart legend changes require only the frontend deployment. Existing trial variants and JSON fields are unchanged; no further SQL or Edge Function update is required after 1.1.1. Earlier trials remain available and fits stay separated by application version.
 
 Version 1.3.0 restores the ordinary-button Interface baseline and adds the geometric Method explorer. The `buttons-varied` variant is already accepted by ingress. Deploy the frontend only; no SQL or Edge Function change is needed. Existing results remain saved and version-separated.
+
+## Participant round reset update
+
+Apply `supabase/migrations/202609290001_reset_participant_run.sql` after both existing migrations, then redeploy `classroom-api`, then publish the frontend. This adds a credential-authorized reset RPC and per-participant/run deletion markers. It changes ingestion so delayed batches cannot recreate a deleted round. The reset uses the existing classroom `data_revision` and private broadcast for reconciliation. Existing measurements are unchanged when the migration is applied.
+
+**Reset round…** removes the current round locally and from all classrooms it was shared with; earlier rounds and other participants remain. If disconnected, students keep their local copy and retry the pending reset. **Start another round** preserves completed results. A reset does not delete classroom membership or previously exported files.

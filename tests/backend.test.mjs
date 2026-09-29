@@ -15,3 +15,15 @@ test('missing server configuration fails closed',async()=>{const r=await handle(
 test('reset data requires instructor authentication',async()=>{const r=await handle(req({action:'reset-data',room_id:room}),env);assert.equal(r.status,401);});
 test('reset data cannot affect another instructor’s room',async()=>{let rpc=false;const fake=async url=>{if(url.includes('/rpc/'))rpc=true;return url.includes('/auth/v1/user')?response({id:user}):url.includes('/instructors?')?response([{user_id:user}]):response([]);};const r=await handle(req({action:'reset-data',room_id:room},{authorization:'Bearer test-user'}),env,fake);assert.equal(r.status,404);assert.equal(rpc,false);});
 test('reset data passes the authenticated owner to the atomic RPC',async()=>{let payload;const fake=async(url,o)=>{if(url.includes('/auth/v1/user'))return response({id:user});if(url.includes('/instructors?'))return response([{user_id:user}]);if(url.includes('/rpc/reset_fitts_room_data')){payload=JSON.parse(o.body);return response({room:{id:room,data_revision:1},removed:12});}return response([{id:room,owner_id:user}]);};const r=await handle(req({action:'reset-data',room_id:room,owner_id:room},{authorization:'Bearer test-user'}),env,fake);assert.equal(r.status,200);assert.deepEqual(payload,{p_room:room,p_owner:user});assert.equal((await r.json()).removed,12);});
+test('participant reset requires a valid credential before calling the database',async()=>{
+ let called=false;const r=await handle(req({action:'reset-run',participant_id:user,run_id:room,token:'bad'}),env,async()=>{called=true;return response({});});
+ assert.equal(r.status,401);assert.equal(called,false);
+});
+test('participant reset hashes the token and cannot choose a room or another owner',async()=>{
+ let path,payload;const r=await handle(req({action:'reset-run',participant_id:user,run_id:room,room_id:user,owner_id:room,token:'ab'.repeat(32)}),env,async(url,o)=>{path=url;payload=JSON.parse(o.body);return response({removed:8});});
+ assert.equal(r.status,200);assert.ok(path.endsWith('/rpc/reset_fitts_participant_run'));
+ assert.deepEqual(Object.keys(payload).sort(),['p_hash','p_participant','p_run']);assert.equal(payload.p_participant,user);assert.equal(payload.p_run,room);assert.equal(payload.p_hash.length,64);assert.notEqual(payload.p_hash,'ab'.repeat(32));
+});
+test('incorrect participant reset credentials are rejected by the database',async()=>{
+ const r=await handle(req({action:'reset-run',participant_id:user,run_id:room,token:'ab'.repeat(32)}),env,async()=>response({message:'Invalid participant credentials'},403));assert.equal(r.status,403);
+});

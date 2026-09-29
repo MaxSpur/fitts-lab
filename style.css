@@ -145,3 +145,5 @@ body:not(.dashboard) .chart-grid .empty-chart{min-height:170px;padding:8px;margi
 body:not(.dashboard) .chart-grid .chart-subtitle{margin:0 0 3px;font-size:10px}
 body:not(.dashboard) .chart-grid .chart-title{margin:0;min-height:20px}
 @media(max-width:720px){body:not(.dashboard) .workbench{grid-template-columns:1fr;gap:0}body:not(.dashboard) .controls{padding:6px 0;border-left:0}body:not(.dashboard) .stage-body{width:100%}body:not(.dashboard) .feedback-heading select{max-width:230px}.geometry-editor svg text{font-size:15px}}
+
+#reset-dialog .actions{display:flex;gap:8px;flex-wrap:wrap}

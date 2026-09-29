@@ -8,8 +8,8 @@ import {hash,firstAttempts,mean,pathRows,speedRows,endpointRows} from './math.js
 import {boundaryRows,trendlines,trendCaption,plotAxis} from './analysis.js';
 import {Chart} from './charts.js';
 import {pathSpec,speedSpec,endpointsSpec,scatterSpec,boundarySpec} from './specs.js';
-import {put,get,all,clearParticipantData,saved,save,identity} from './storage.js';
-import {configured,api,localRoom,joinRoom,Outbox} from './network.js';
+import {put,get,all,clearParticipantRun,saved,save,identity} from './storage.js';
+import {configured,api,localRoom,joinRoom,Outbox,resetSharedRun} from './network.js';
 common();
 let currentRun=saved('experiment-run',null);if(!currentRun||currentRun.version!==VERSION){currentRun=nextRun(currentRun);save('experiment-run',currentRun);save('progress',{});}
 const person=identity(),localLabel='P-'+person.slice(0,6).toUpperCase();
@@ -181,19 +181,43 @@ $('#new-run').onclick=()=>{
   updateRunControls();$('#result-run').value=currentRun.id;resultExtent=1600;switchTask('horizontal');renderResults();
   $('#experiment').scrollIntoView({behavior:'smooth'});toast(`Run ${currentRun.number} is ready. Earlier results are saved.`);
 };
-$('#clear-data').onclick=async()=>{
-  if(!confirm('Start over from the first Horizontal set? This permanently deletes all experiment results and set history saved in this browser, including earlier runs and pending uploads. Export first if you want to keep them. Results already shared with the instructor, including uploads already in progress, remain in the classroom. Your classroom connection is kept.'))return;
-  const button=$('#clear-data');button.disabled=true;
-  arena.pause('Starting over');clearTimeout(refreshTimer);refreshTimer=null;
+function resetState(){
+  const pending=!!saved('pending-run-reset',null);
+  $('#experiment').inert=pending;
+  $('#new-run').disabled=pending;
+  text('#clear-data',pending?'Retry reset…':'Reset round…');
+}
+$('#clear-data').onclick=()=>{
+  arena.pause('Reset requested');
+  text('#reset-error',saved('pending-run-reset',null)?'A reset is unfinished. Retry to finish removing shared results.':'');
+  $('#reset-dialog').showModal();
+};
+$('#confirm-reset').onclick=async()=>{
+  const button=$('#confirm-reset');button.disabled=true;
+  arena.pause('Reset round');clearTimeout(refreshTimer);refreshTimer=null;
   try{
-    await clearParticipantData();
-    rows=[];sets=[];currentSet=null;progress={};save('progress',progress);
-    currentRun=nextRun(currentRun);save('experiment-run',currentRun);
+    let pending=saved('pending-run-reset',null);
+    if(!pending){
+      const credentials=new Map(),roomIds=new Set();
+      if(membership)credentials.set(membership.room.id,membership.credential);
+      for(const row of rows)if(row.run_id===currentRun.id&&row.room_id)roomIds.add(row.room_id);
+      for(const set of sets)if(set.options?.runId===currentRun.id&&set.options.roomId)roomIds.add(set.options.roomId);
+      for(const item of await all('outbox'))if(item.trial?.run_id===currentRun.id)credentials.set(item.credential.room_id,item.credential);
+      for(const id of roomIds){const c=credentials.get(id)||saved('membership:'+id,null);if(!c?.participant_id)throw new Error('The saved classroom credential is missing. Ask the instructor to remove your shared results before resetting.');credentials.set(id,c);}
+      pending={run:currentRun,credentials:[...credentials.values()]};save('pending-run-reset',pending);
+    }
+    resetState();
+    for(const credential of pending.credentials)await resetSharedRun(credential,pending.run.id);
+    await clearParticipantRun(pending.run.id);
+    rows=rows.filter(r=>r.run_id!==pending.run.id);sets=sets.filter(s=>s.options?.runId!==pending.run.id);currentSet=null;
+    progress={};save('progress',progress);currentRun=nextRun(pending.run);save('experiment-run',currentRun);
     $('#run-mode').value='guided';$('#explore-controls').hidden=true;$('#input-mode').value='auto';$('#jitter').checked=false;$('#gain').value='1';
     resultExtent=1600;updateRunControls();$('#result-run').value=currentRun.id;
-    switchTask('horizontal');await renderResults();await outbox.status();
-    toast('Local results deleted. The first Horizontal set is ready.');
-  }catch(e){storageError(e);}finally{button.disabled=false;}
+    save('pending-run-reset',null);resetState();switchTask('horizontal');
+    $('#reset-dialog').close();await renderResults();await outbox.status();
+    toast('Round deleted locally and from shared classrooms. Ready to begin again.');
+  }catch(e){text('#reset-error','Reset could not finish: '+e.message+' Your local copy is kept until all shared copies are removed. Retry when connected.');}
+  finally{button.disabled=false;resetState();}
 };
 initGeometryLab();
 async function discoverRoom(){
@@ -233,7 +257,8 @@ setInterval(async()=>{
 for(const q of ['jitter','gain']){const v=saved(q,null);if(v!==null){if(q==='jitter')$('#'+q).checked=v;else $('#'+q).value=v;}}
 $('#input-mode').value='auto';
 const prior=saved('active-membership',null);if(prior&&(prior.credential.source==='local'?localRoom()?.id===prior.room.id:configured()))membership=prior;
-updateMembership();updateRunControls();prepare();renderResults();historyOptions();
+updateMembership();updateRunControls();prepare();renderResults();historyOptions();resetState();
+if(saved('pending-run-reset',null))toast('Reset unfinished. Use Retry reset before continuing.',true);
 $('#mobile-warning').hidden=matchMedia('(pointer:fine)').matches;
 // Recover an incomplete set, with an unscored restart, after a refresh.
 const incomplete=[...sets].reverse().find(s=>s.task===task&&s.state!=='complete'&&s.completed>0&&s.plan&&s.options&&

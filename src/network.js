@@ -1,5 +1,5 @@
 import {CONFIG} from '../config.js';
-import {saved,save,put,all,removeMany} from './storage.js';
+import {saved,save,put,all,removeMany,resetLocalRun,putLocalTrial} from './storage.js';
 import {downsample} from './math.js';
 export const configured=()=>!!(CONFIG.supabaseUrl&&CONFIG.publishableKey);
 export class ApiError extends Error{constructor(message,status=0){super(message);this.status=status;}}
@@ -34,13 +34,22 @@ export async function joinRoom(room,device,source='remote'){
   }else p=(await api('join',{room_id:room.id,client_key:c.client_key,token:c.token,device})).participant;
   c={...c,participant_id:p.id,participant_label:p.label};save('membership:'+room.id,c);save('active-membership',{credential:c,room});return c;
 }
+/** Authenticated reset is scoped to this participant and round, even in an ended room. */
+export async function resetSharedRun(credential,runId){
+  if(credential.source!=='local')return api('reset-run',{participant_id:credential.participant_id,token:credential.token,run_id:runId});
+  await resetLocalRun(credential.room_id,credential.participant_id,runId);
+  const room=saved('local-room:'+credential.room_id,null);
+  if(room){const updated={...room,data_revision:(room.data_revision||0)+1};save('local-room:'+room.id,updated);
+    if(localRoom()?.id===room.id)save('local-room',updated);
+    const c=channel();c?.postMessage({type:'room',room_id:room.id,room:updated});c?.close();}
+}
 /** Persistent, idempotent outbox. Only measurements recorded AFTER joining are queued. */
 export class Outbox {
   constructor(onStatus=()=>{}){this.onStatus=onStatus;this.busy=false;this.wait=0;this.failures=0;this.blocked=new Set();this.bc=channel();this.timer=setInterval(()=>this.flush().catch(e=>{if(!this.storageErrorReported){this.storageErrorReported=true;this.onStatus({pending:0,message:'Browser storage is unavailable: '+e.message,blocked:true});}}),CONFIG.uploadIntervalMs);window.addEventListener('online',()=>{this.wait=0;this.flush();});document.addEventListener('visibilitychange',()=>{if(!document.hidden){this.wait=0;this.flush();}});}
   async enqueue(trial,credential){await put('outbox',{id:trial.id,trial,credential});this.status();if(!this.kickTimer)this.kickTimer=setTimeout(()=>{this.kickTimer=null;this.flush();},350);}
   async status(message){const rows=await all('outbox');this.onStatus({pending:rows.length,message,blocked:this.blocked.size>0});}
   async flush(){
-    if(this.busy||Date.now()<this.wait||!navigator.onLine)return;this.busy=true;let activeCredential=null;
+    if(saved('pending-run-reset',null)||this.busy||Date.now()<this.wait||!navigator.onLine)return;this.busy=true;let activeCredential=null;
     try{
       const queued=(await all('outbox')).filter(r=>!this.blocked.has(r.credential.room_id));
       if(!queued.length){await this.status();return;}
@@ -50,8 +59,8 @@ export class Outbox {
       let accepted;
       if(credential.source==='local'){
         const r=saved('local-room:'+credential.room_id,null)||localRoom();if(!r||r.id!==credential.room_id||r.status==='deleted'||Date.parse(r.accept_until)<=Date.now()||Date.parse(r.expires_at)<=Date.now())throw new ApiError('Local classroom upload window has ended.',410);
-        for(const row of rows)await put('localClass',{id:'trial:'+credential.room_id+':'+row.id,kind:'trial',room_id:credential.room_id,data:row});
-        this.bc?.postMessage({type:'trials',room_id:credential.room_id,rows});accepted=rows.map(r=>r.id);
+        const published=[];for(const row of rows)if(await putLocalTrial(credential.room_id,row))published.push(row);
+        this.bc?.postMessage({type:'trials',room_id:credential.room_id,rows:published});accepted=rows.map(r=>r.id);
       }else{
         const result=await api('ingest',{participant_id:credential.participant_id,token:credential.token,rows});accepted=result.accepted||[];
       }

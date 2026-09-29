@@ -21,14 +21,35 @@ export function saved(key,fallback){try{return JSON.parse(localStorage.getItem('
 export function save(key,value){memoryPreferences.set(key,value);try{localStorage.setItem('fitts:'+key,JSON.stringify(value));}catch{/* Preferences remain usable for this tab; participant storage reports persistence failures separately. */}}
 export function identity(){let id=saved('identity',null);if(!id){id=crypto.randomUUID();save('identity',id);}return id;}
 
-/** Clear participant history and queued uploads together; preserve classroom membership. */
-export async function clearParticipantData(){
-  const d=await db();
-  return new Promise((resolve,reject)=>{
+/** Delete only one round, atomically across its local stores. */
+export async function clearParticipantRun(runId){
+  const d=await db();return new Promise((resolve,reject)=>{
     const tx=d.transaction(['trials','sets','outbox'],'readwrite');
-    for(const name of ['trials','sets','outbox'])tx.objectStore(name).clear();
-    tx.oncomplete=()=>resolve();
-    tx.onerror=()=>reject(tx.error);
-    tx.onabort=()=>reject(tx.error||new Error('Local reset aborted.'));
+    for(const name of ['trials','sets','outbox']){
+      const request=tx.objectStore(name).openCursor();
+      request.onsuccess=()=>{const cursor=request.result;if(!cursor)return;const row=cursor.value;
+        if((name==='sets'?row.options?.runId:name==='outbox'?row.trial?.run_id:row.run_id)===runId)cursor.delete();cursor.continue();};
+    }
+    tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error('Local reset aborted.'));
+  });
+}
+export const localResetKey=(participantId,runId)=>`reset-run:${participantId}:${runId}`;
+export async function resetLocalRun(roomId,participantId,runId){
+  const d=await db();return new Promise((resolve,reject)=>{
+    const tx=d.transaction(['meta','localClass'],'readwrite');
+    tx.objectStore('meta').put({id:localResetKey(participantId,runId)});
+    const request=tx.objectStore('localClass').openCursor();
+    request.onsuccess=()=>{const c=request.result;if(!c)return;const row=c.value;
+      if(row.kind==='trial'&&row.room_id===roomId&&row.data.participant_id===participantId&&row.data.run_id===runId)c.delete();c.continue();};
+    tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+  });
+}
+/** The tombstone check and insert share a transaction with local reset. */
+export async function putLocalTrial(roomId,row){
+  const d=await db();return new Promise((resolve,reject)=>{
+    const tx=d.transaction(['meta','localClass'],'readwrite');let inserted=false;
+    const request=tx.objectStore('meta').get(localResetKey(row.participant_id,row.run_id));
+    request.onsuccess=()=>{if(request.result)return;tx.objectStore('localClass').put({id:'trial:'+roomId+':'+row.id,kind:'trial',room_id:roomId,data:row});inserted=true;};
+    tx.oncomplete=()=>resolve(inserted);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
   });
 }

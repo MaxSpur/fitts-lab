@@ -528,4 +528,21 @@ adds the geometric Method explorer. The <code>buttons-varied</code>
 variant is already accepted by ingress. Deploy the frontend only; no SQL
 or Edge Function change is needed. Existing results remain saved and
 version-separated.</p>
+<h2 id="participant-round-reset-update">Participant round reset
+update</h2>
+<p>Apply
+<code>supabase/migrations/202609290001_reset_participant_run.sql</code>
+after both existing migrations, then redeploy
+<code>classroom-api</code>, then publish the frontend. This adds a
+credential-authorized reset RPC and per-participant/run deletion
+markers. It changes ingestion so delayed batches cannot recreate a
+deleted round. The reset uses the existing classroom
+<code>data_revision</code> and private broadcast for reconciliation.
+Existing measurements are unchanged when the migration is applied.</p>
+<p><strong>Reset round…</strong> removes the current round locally and
+from all classrooms it was shared with; earlier rounds and other
+participants remain. If disconnected, students keep their local copy and
+retry the pending reset. <strong>Start another round</strong> preserves
+completed results. A reset does not delete classroom membership or
+previously exported files.</p>
 <footer>Fitts Lab 1.3.0 · <a href="DEPLOYMENT.md">Markdown source</a></footer></main></body></html>

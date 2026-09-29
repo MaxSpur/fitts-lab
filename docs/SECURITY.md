@@ -46,7 +46,7 @@ Room closure preserves its data for instructor export/review. There is no automa
 
 Supabase documents temporary database-Broadcast messages in `realtime.messages` with approximately three-day retention. Deleting the application room removes access to its private channel through the ownership policy, but does not immediately purge that service-managed message store. For strict retention requirements, review the provider's documented retention and your institutional agreement before use.
 
-The local Clear command erases the participant's measurements, sets, and pending uploads. It does not delete the instructor's cloud copy. Clearing site storage through the browser also removes saved participant credentials and can create a new identity on rejoining.
+Reset round uses the participant's saved credential to delete that round's database rows, then clears its local measurements, sets, and queued uploads. Earlier rounds and other participants are preserved. Server-side deletion markers prevent delayed batches from restoring the round; reset and ingestion share the room lock. Reset requires connectivity for shared rounds and can be retried after failure. It does not purge exported files, backups, or temporary provider Broadcast messages. Clearing site storage through the browser also removes saved participant credentials and can create a new identity on rejoining.
 
 ## Sources
 

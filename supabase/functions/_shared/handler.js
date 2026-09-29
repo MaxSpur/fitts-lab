@@ -51,6 +51,9 @@ export async function handle(request,env,fetcher=fetch){
       const result=await rest('rpc/join_fitts_room','POST',{p_room:uuid(b.room_id),p_client:uuid(b.client_key),p_hash:await sha256(participantToken(b.token)),p_device:choice(b.device,['mouse','trackpad','pen','other','unspecified'],'device')});
       return respond({participant:result});
     }
+    if(b.action==='reset-run'){
+      return respond(await rest('rpc/reset_fitts_participant_run','POST',{p_participant:uuid(b.participant_id),p_hash:await sha256(participantToken(b.token)),p_run:uuid(b.run_id)}));
+    }
     if(b.action==='ingest'){
       if(!Array.isArray(b.rows)||b.rows.length<1||b.rows.length>24)throw new HttpError(400,'Send 1–24 observations per batch.');
       const rows=b.rows.map(r=>validateTrial(r,40));const result=await rest('rpc/ingest_fitts_batch','POST',{p_participant:uuid(b.participant_id),p_hash:await sha256(participantToken(b.token)),p_rows:rows});return respond(result);
