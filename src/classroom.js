@@ -64,19 +64,19 @@ async function render(){
     const max=Math.max(...rs.map(r=>r.acquisition_ms));const nextExtent=Math.max(extent,Math.ceil(max/500)*500);
     const fitData=trend.lines,axisInfo=plotAxis(rs,axis);
     const chartRows=displaySample(rs).map(r=>({...r,dataset_id:datasetKey(r),student_color:studentColor(r.participant_id),outcome:r.hit?'Hit':'Miss'})),data={trials:chartRows,means:means.map(r=>({...r,dataset_id:datasetKey(r),student_color:studentColor(r.participant_id)})),fit:fitData};
-    if(!charts.hero.result||nextExtent!==extent||charts.hero.spec.layer[0].encoding.x.field!==axis||charts.hero.spec.layer[0].encoding.x.scale.domain[1]!==axisInfo.maximum){extent=nextExtent;await charts.hero.set(heroSpec({extent,x:axis,xMax:axisInfo.maximum}),data);bindSelection();}else await charts.hero.update(data);
+    if(!charts.hero.result||nextExtent!==extent||charts.hero.spec.layer[0].encoding.x.field!==axis||charts.hero.spec.layer[0].encoding.x.scale.domain[1]!==axisInfo.maximum){extent=nextExtent;await charts.hero.set(heroSpec({extent,x:axis,xMax:axisInfo.maximum}),data);bindSelection(charts.hero);}else await charts.hero.update(data);
     if(generation!==sourceGeneration)return;
     focusStudent();renderedRows=rs;text('#fit-caption',trendCaption(trend,field)+' · pooled classroom observations');
     const cutoffNote=filtered.hidden?` · ${filtered.hidden} ${filtered.hidden===1?'trial':'trials'} over ${filtered.cutoff/1000} s hidden from plots and fits; exports keep all data`:'';
     text('#coverage',`${rs.length} first attempts in this view · ${new Set(rs.map(r=>r.participant_id)).size} students · ${new Set(rs.map(datasetKey)).size} runs · ${new Set(rs.map(r=>r.condition)).size} conditions${cutoffNote}${rs.length>5000?' · faint marks show a deterministic 5,000-observation sample; calculations use all visible rows':''}`);
   }else{charts.hero.empty('The selected task and condition have no observations yet.');text('#fit-caption','Waiting for enough successful trials to fit a line.');text('#coverage','');}
   const noise=$('#noise-filter').value,boundaries=boundaryRows(allRows,noise,filtered.cutoff),boundaryHidden=boundaryOutlierCount(allRows,noise,filtered.cutoff);
-  if(boundaries.length){if(charts.boundary.result)await charts.boundary.update({boundaries});else await charts.boundary.set(boundarySpec(),{boundaries});const cutoffText=boundaryHidden?` ${boundaryHidden} successful ${boundaryHidden===1?'trial':'trials'} over ${filtered.cutoff/1000} s ${boundaryHidden===1?'is':'are'} omitted from the timing means; error rates still use all first attempts.`:'';text('#boundary-note','Successful first attempts.'+cutoffText+' Free runs precede bounded runs; practice may affect the difference.');}else{charts.boundary.empty('Interface measurements will appear here.');text('#boundary-note',boundaryHidden?`${boundaryHidden} successful boundary ${boundaryHidden===1?'trial':'trials'} ${boundaryHidden===1?'is':'are'} above the ${filtered.cutoff/1000} s cutoff. Choose Show all times to inspect the unfiltered comparison.`:'');}
+  if(boundaries.length){if(charts.boundary.result)await charts.boundary.update({boundaries});else{await charts.boundary.set(boundarySpec(),{boundaries});bindSelection(charts.boundary);}const cutoffText=boundaryHidden?` ${boundaryHidden} successful ${boundaryHidden===1?'trial':'trials'} over ${filtered.cutoff/1000} s ${boundaryHidden===1?'is':'are'} omitted from the timing means; error rates still use all first attempts.`:'';text('#boundary-note','Successful first attempts.'+cutoffText+' Free runs precede bounded runs; practice may affect the difference.');focusStudent();}else{charts.boundary.empty('Interface measurements will appear here.');text('#boundary-note',boundaryHidden?`${boundaryHidden} successful boundary ${boundaryHidden===1?'trial':'trials'} ${boundaryHidden===1?'is':'are'} above the ${filtered.cutoff/1000} s cutoff. Choose Show all times to inspect the unfiltered comparison.`:'');}
   if(generation!==sourceGeneration)return;
   await renderSelectedPath();renderedCount=records.size;
 }
-function bindSelection(){charts.hero.result?.view.addSignalListener('selectedPerson',(_,v)=>{const ids=v?.dataset_id;selected=Array.isArray(ids)?ids[0]||null:null;focusStudent();renderSelectedPath();renderMosaic();});}
-function focusStudent(){const view=charts.hero.result?.view;if(view)view.signal('focusStudent',selected||'').runAsync().catch(console.error);}
+function bindSelection(chart){chart.result?.view.addSignalListener('selectedPerson',(_,v)=>{const ids=v?.dataset_id;selected=Array.isArray(ids)?ids[0]||null:null;focusStudent();renderSelectedPath();renderMosaic();});}
+function focusStudent(){const hero=charts.hero.result?.view;if(hero)hero.signal('focusStudent',selected||'').runAsync().catch(console.error);const boundary=charts.boundary.result?.view;if(boundary){const rows=charts.boundary.rows.boundaries||[],focus=selected&&rows.some(r=>r.dataset_id===selected)?selected:'';boundary.signal('focusStudent',focus).runAsync().catch(console.error);}}
 function renderMosaic(){
   const runs=activityRuns(frozen&&frozenActivity?frozenActivity:[...records.values()]);
   const contributors=new Set(runs.map(r=>r.participantId));
@@ -113,11 +113,11 @@ $('#clear-selection').onclick=()=>{selected=null;focusStudent();renderSelectedPa
 async function renderSelectedPath(){
   const sourceRows=frozen&&frozenActivity?frozenActivity:[...records.values()],activity=activityRuns(sourceRows);let p=activity.find(r=>r.id===selected);if(!p?.latest){const latest=sourceRows.filter(r=>!r.practice).at(-1);p=latest?activity.find(r=>r.id===datasetKey(latest)):null;}
   if(!p?.latest){charts.path.empty('Select a student run to inspect its recent movements.');return;}
-  const latest=p.latest,runRows=sourceRows.filter(r=>!r.practice&&datasetKey(r)===p.id),sameSet=latest.set_id?runRows.filter(r=>r.set_id===latest.set_id):runRows.filter(r=>r.task===latest.task),recent=sameSet.slice(-12);
+  const runRows=sourceRows.filter(r=>!r.practice&&datasetKey(r)===p.id),recent=runRows.slice(-12);
   if(!recent.length){charts.path.empty('No movement paths are available for this run.');return;}
   const n=recent.length,last=recent.at(-1);text('#selected-path-title',`${p.label} · latest ${n} ${n===1?'movement':'movements'}`);const paths=pathRows(recent,12);
   if(charts.path.result)await charts.path.update({paths});else await charts.path.set(pathSpec(),{paths});
-  text('#selected-path-note',`${TASK_LABELS[last.task]} · latest set · ${n} overlaid ${n===1?'attempt':'attempts'} · latest ${Math.round(last.acquisition_ms)} ms · ${last.hit?'hit':'miss'}${last.attempt>1?' · retry':''} · raw paths are unaffected by the time cutoff`);
+  text('#selected-path-note',`${TASK_LABELS[last.task]} latest · ${n} overlaid ${n===1?'attempt':'attempts'} from this run · latest ${Math.round(last.acquisition_ms)} ms · ${last.hit?'hit':'miss'}${last.attempt>1?' · retry':''} · raw paths are unaffected by the time cutoff`);
 }
 function showConnection(){
   if(source!=='remote')return;
@@ -193,7 +193,7 @@ async function axisTo(next){
   text('#axis-caption',plotAxis([],axis).caption);
   if(frozen&&charts.hero.result){
     const rows=frozenRows||[],trend=trendlines(rows,axis),data={...charts.hero.rows,fit:trend.lines};
-    await charts.hero.set(heroSpec({extent,x:axis,xMax:plotAxis(rows,axis).maximum}),data);bindSelection();focusStudent();text('#fit-caption','Frozen · '+trendCaption(trend,axis));
+    await charts.hero.set(heroSpec({extent,x:axis,xMax:plotAxis(rows,axis).maximum}),data);bindSelection(charts.hero);focusStudent();text('#fit-caption','Frozen · '+trendCaption(trend,axis));
   }else schedule();
 }
 $$('[data-axis]').forEach(b=>b.onclick=()=>axisTo(b.dataset.axis));

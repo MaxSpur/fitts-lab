@@ -31,3 +31,5 @@ for(const name of ['scatterSpec','heroSpec'])test(`${name} keeps point glyphs se
  assert.equal(trend.symbolType,'stroke');assert.ok(trend.strokeDash);
  assert.equal(compiled.legends.filter(l=>l.shape).length,1);
 });
+
+test('boundary chart exposes the shared run focus and selection signals',()=>{const spec=specs.boundarySpec();assert.ok(spec.params.some(p=>p.name==='focusStudent'));assert.equal(spec.layer[2].params[0].name,'selectedPerson');assert.match(spec.layer[1].encoding.opacity.condition.test,/dataset_id/);assert.match(spec.layer[2].encoding.opacity.condition.test,/dataset_id/);});

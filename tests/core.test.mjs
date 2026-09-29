@@ -136,7 +136,7 @@ test('boundary chart only connects comparable input conditions',()=>{
 test('boundary timing cutoff excludes slow successful times without changing the error-rate denominator',()=>{
   const base={participant_id:pid,run_id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',participant_label:'TEST',app_version:VERSION,task:'interfaces',practice:false,attempt:1,perturbation:'normal',gain:1,input_mode:'native',variant:'menu-floating',condition:'menu-floating-control'};
   const rows=boundaryRows([{...base,id:'1',hit:true,acquisition_ms:400},{...base,id:'2',hit:true,acquisition_ms:6000},{...base,id:'3',hit:false,acquisition_ms:7000}],'normal',5000);
-  assert.equal(rows.length,1);assert.equal(rows[0].acquisition_ms,400);assert.equal(rows[0].timed_n,1);assert.equal(rows[0].excluded_time,1);assert.equal(rows[0].n,3);assert.equal(rows[0].error_rate,1/3);
+  assert.equal(rows.length,1);assert.equal(rows[0].dataset_id,`${pid}:bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb`);assert.equal(rows[0].acquisition_ms,400);assert.equal(rows[0].timed_n,1);assert.equal(rows[0].excluded_time,1);assert.equal(rows[0].n,3);assert.ok(Math.abs(rows[0].error_rate-1/3)<1e-12);
 });
 test('classroom preview follows current guided task lengths and includes circles',()=>{
   const rows=simulationRows(1,28);
