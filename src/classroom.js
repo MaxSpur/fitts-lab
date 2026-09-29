@@ -18,9 +18,9 @@ let connectionRun=0;
 let sourceGeneration=0,frozenPeople=null,frozenRows=null,renderedRows=[],frozenActivity=null;
 let frozen=false,renderedCount=0,renderTimer=null,rendering=false,dirty=false,extent=1600,axis='index_difficulty';
 let streamState='Connecting…',lastSync=null,syncError='';
-const flashes=new Set();const bc=channel();
+const flashes=new Set();const bc=channel();const chartControls=['#task-filter','#noise-filter','#outlier-filter'];
 function id(r){return `${r.participant_id}:${r.id}`;}
-function reset(next){connectionRun++;sourceGeneration++;frozenPeople=null;frozenRows=null;frozenActivity=null;renderedRows=[];for(const q of ['#task-filter','#noise-filter'])$(q).disabled=false;stream?.close();stream=null;clearInterval(poll);clearInterval(demoTimer);clearTimeout(renderTimer);renderTimer=null;dirty=false;cursor='0';source=next;records=new Map();participants=new Map();room=null;selected=null;flashes.clear();extent=1600;lastReceived=null;renderedCount=0;frozen=false;syncing=false;
+function reset(next){connectionRun++;sourceGeneration++;frozenPeople=null;frozenRows=null;frozenActivity=null;renderedRows=[];for(const q of chartControls)$(q).disabled=false;stream?.close();stream=null;clearInterval(poll);clearInterval(demoTimer);clearTimeout(renderTimer);renderTimer=null;dirty=false;cursor='0';source=next;records=new Map();participants=new Map();room=null;selected=null;flashes.clear();extent=1600;lastReceived=null;renderedCount=0;frozen=false;syncing=false;
   lastSync=null;syncError='';streamState='Connecting…';text('#sync-now','Sync now');$('#sync-now').hidden=next!=='remote';text('#session-state','');text('#freeze','Freeze view');$('#source-banner').classList.toggle('simulation',next==='simulation');$('#session-controls').hidden=!['local','remote'].includes(next);
   for(const c of Object.values(charts))c.empty('Waiting for measurements.');$('#mosaic').innerHTML='';$('#mosaic-empty').hidden=false;text('#participant-count','0');text('#mosaic-count','0');text('#selected-path-title','Movement path');text('#selected-path-note','');text('#boundary-note','');text('#attempt-count','0');text('#error-count','—');text('#last-update','Nothing received yet');text('#fit-caption','Waiting for enough successful trials to fit a line.');text('#coverage','');renderMosaic();
 }
@@ -37,7 +37,7 @@ function acceptRoom(next){
     for(const p of participants.values()){p.count=0;delete p.latest;}
     for(const c of Object.values(charts))c.empty('No measurements since reset.');
     $('#mosaic').innerHTML='';text('#freeze','Freeze view');
-    for(const q of ['#task-filter','#noise-filter'])$(q).disabled=false;
+    for(const q of chartControls)$(q).disabled=false;
     text('#selected-path-title','Movement path');text('#selected-path-note','');
   }
   room=next;setupRoomControls();schedule();
@@ -49,9 +49,13 @@ function setupRoomControls(){
   $('#end-room').disabled=!state.open;$('#delete-room').disabled=!room;$('#reset-data').disabled=!room;$('#room-list').closest('div').hidden=source==='local';$('#capacity').closest('label').hidden=source==='local';
 }
 function schedule(){dirty=true;if(renderTimer||rendering||frozen)return;renderTimer=setTimeout(async()=>{renderTimer=null;if(!dirty||frozen)return;dirty=false;rendering=true;try{await render();}catch(e){toast('Chart update failed: '+e.message,true);console.error(e);}finally{rendering=false;if(dirty)schedule();}},450);}
-function filterRows(){const task=$('#task-filter').value,noise=$('#noise-filter').value;return firstAttempts([...records.values()],{...(task==='all'?{}:{task}),perturbation:noise}).filter(r=>Number.isFinite(r.index_difficulty)&&!/-edge$/.test(r.variant));}
+function acquisitionCutoff(){const value=$('#outlier-filter').value;return value==='all'?Infinity:Number(value);}
+function withinCutoff(r,cutoff=acquisitionCutoff()){return !Number.isFinite(cutoff)||r.acquisition_ms<=cutoff;}
+function heroRows(allRows=[...records.values()]){const task=$('#task-filter').value,noise=$('#noise-filter').value;return firstAttempts(allRows,{...(task==='all'?{}:{task}),perturbation:noise}).filter(r=>Number.isFinite(r.index_difficulty)&&!/-edge$/.test(r.variant));}
+function filterRows(allRows=[...records.values()]){const cutoff=acquisitionCutoff(),eligible=heroRows(allRows),rows=eligible.filter(r=>withinCutoff(r,cutoff));return{rows,hidden:eligible.length-rows.length,cutoff};}
+function boundaryOutlierCount(rows,perturbation,cutoff){if(!Number.isFinite(cutoff))return 0;return firstAttempts(rows,{task:'interfaces',perturbation,hitsOnly:true}).filter(r=>/^(menu|corner)-(floating|edge)$/.test(r.variant)&&r.condition===`${r.variant}-control`&&r.acquisition_ms>cutoff).length;}
 async function render(){
-  if(frozen)return;const generation=sourceGeneration;const allRows=[...records.values()],allFirst=firstAttempts(allRows,{perturbation:'all'}),rs=filterRows();
+  if(frozen)return;const generation=sourceGeneration;const allRows=[...records.values()],allFirst=firstAttempts(allRows,{perturbation:'all'}),filtered=filterRows(allRows),rs=filtered.rows;
   text('#participant-count',participants.size);text('#attempt-count',records.size.toLocaleString());text('#error-count',allFirst.length?`${(100*allFirst.filter(r=>!r.hit).length/allFirst.length).toFixed(1)}%`:'—');
   text('#last-update',lastReceived?`Last received ${new Date(lastReceived).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`:'Nothing received yet');
   renderMosaic();
@@ -63,10 +67,11 @@ async function render(){
     if(!charts.hero.result||nextExtent!==extent||charts.hero.spec.layer[0].encoding.x.field!==axis||charts.hero.spec.layer[0].encoding.x.scale.domain[1]!==axisInfo.maximum){extent=nextExtent;await charts.hero.set(heroSpec({extent,x:axis,xMax:axisInfo.maximum}),data);bindSelection();}else await charts.hero.update(data);
     if(generation!==sourceGeneration)return;
     focusStudent();renderedRows=rs;text('#fit-caption',trendCaption(trend,field)+' · pooled classroom observations');
-    text('#coverage',`${rs.length} first attempts in this view · ${new Set(rs.map(r=>r.participant_id)).size} students · ${new Set(rs.map(datasetKey)).size} runs · ${new Set(rs.map(r=>r.condition)).size} conditions${rs.length>5000?' · faint marks show a deterministic 5,000-observation sample; calculations use all rows':''}`);
+    const cutoffNote=filtered.hidden?` · ${filtered.hidden} ${filtered.hidden===1?'trial':'trials'} over ${filtered.cutoff/1000} s hidden from plots and fits; exports keep all data`:'';
+    text('#coverage',`${rs.length} first attempts in this view · ${new Set(rs.map(r=>r.participant_id)).size} students · ${new Set(rs.map(datasetKey)).size} runs · ${new Set(rs.map(r=>r.condition)).size} conditions${cutoffNote}${rs.length>5000?' · faint marks show a deterministic 5,000-observation sample; calculations use all visible rows':''}`);
   }else{charts.hero.empty('The selected task and condition have no observations yet.');text('#fit-caption','Waiting for enough successful trials to fit a line.');text('#coverage','');}
-  const boundaries=boundaryRows(allRows,$('#noise-filter').value);
-  if(boundaries.length){if(charts.boundary.result)await charts.boundary.update({boundaries});else await charts.boundary.set(boundarySpec(),{boundaries});text('#boundary-note','Successful first attempts. Free runs precede bounded runs; practice may affect the difference.');}else{charts.boundary.empty('Interface measurements will appear here.');text('#boundary-note','');}
+  const noise=$('#noise-filter').value,boundaries=boundaryRows(allRows,noise,filtered.cutoff),boundaryHidden=boundaryOutlierCount(allRows,noise,filtered.cutoff);
+  if(boundaries.length){if(charts.boundary.result)await charts.boundary.update({boundaries});else await charts.boundary.set(boundarySpec(),{boundaries});const cutoffText=boundaryHidden?` ${boundaryHidden} successful ${boundaryHidden===1?'trial':'trials'} over ${filtered.cutoff/1000} s ${boundaryHidden===1?'is':'are'} omitted from the timing means; error rates still use all first attempts.`:'';text('#boundary-note','Successful first attempts.'+cutoffText+' Free runs precede bounded runs; practice may affect the difference.');}else{charts.boundary.empty('Interface measurements will appear here.');text('#boundary-note',boundaryHidden?`${boundaryHidden} successful boundary ${boundaryHidden===1?'trial':'trials'} ${boundaryHidden===1?'is':'are'} above the ${filtered.cutoff/1000} s cutoff. Choose Show all times to inspect the unfiltered comparison.`:'');}
   if(generation!==sourceGeneration)return;
   await renderSelectedPath();renderedCount=records.size;
 }
@@ -106,11 +111,13 @@ function renderMosaic(){
 }
 $('#clear-selection').onclick=()=>{selected=null;focusStudent();renderSelectedPath();renderMosaic();};
 async function renderSelectedPath(){
-  const activity=activityRuns(frozen&&frozenActivity?frozenActivity:[...records.values()]);let p=activity.find(r=>r.id===selected);if(!p?.latest){const latest=(frozen&&frozenActivity?frozenActivity:[...records.values()]).filter(r=>!r.practice).at(-1);p=latest?activity.find(r=>r.id===datasetKey(latest)):null;}
-  if(!p?.latest){charts.path.empty('Select a student run to inspect its latest movement.');return;}
-  text('#selected-path-title',`${p.label} · latest movement`);const paths=pathRows([p.latest]);
+  const sourceRows=frozen&&frozenActivity?frozenActivity:[...records.values()],activity=activityRuns(sourceRows);let p=activity.find(r=>r.id===selected);if(!p?.latest){const latest=sourceRows.filter(r=>!r.practice).at(-1);p=latest?activity.find(r=>r.id===datasetKey(latest)):null;}
+  if(!p?.latest){charts.path.empty('Select a student run to inspect its recent movements.');return;}
+  const latest=p.latest,runRows=sourceRows.filter(r=>!r.practice&&datasetKey(r)===p.id),sameSet=latest.set_id?runRows.filter(r=>r.set_id===latest.set_id):runRows.filter(r=>r.task===latest.task),recent=sameSet.slice(-12);
+  if(!recent.length){charts.path.empty('No movement paths are available for this run.');return;}
+  const n=recent.length,last=recent.at(-1);text('#selected-path-title',`${p.label} · latest ${n} ${n===1?'movement':'movements'}`);const paths=pathRows(recent,12);
   if(charts.path.result)await charts.path.update({paths});else await charts.path.set(pathSpec(),{paths});
-  text('#selected-path-note',`${TASK_LABELS[p.latest.task]} · ${Math.round(p.latest.acquisition_ms)} ms · ${p.latest.hit?'hit':'miss'} · attempt ${p.latest.attempt}`);
+  text('#selected-path-note',`${TASK_LABELS[last.task]} · latest set · ${n} overlaid ${n===1?'attempt':'attempts'} · latest ${Math.round(last.acquisition_ms)} ms · ${last.hit?'hit':'miss'}${last.attempt>1?' · retry':''} · raw paths are unaffected by the time cutoff`);
 }
 function showConnection(){
   if(source!=='remote')return;
@@ -177,9 +184,9 @@ $('#delete-room').onclick=async()=>{if(!room||prompt('This permanently deletes t
   try{if(source==='local'){const rs=await all('localClass');await removeMany('localClass',rs.filter(r=>r.room_id===room.id).map(r=>r.id));updateLocalRoom({status:'deleted'});reset('local');labelSource();setupRoomControls();}else{await auth.call('delete',{room_id:room.id});reset('remote');await loadCloud();}toast('Session deleted. Already-exported files and other browsers’ local copies are unchanged.');}catch(e){toast(e.message,true);}};
 $('#load-room').onclick=async()=>{const o=$('#room-list').selectedOptions[0];if(o?.dataset.room)await attachRemote(JSON.parse(o.dataset.room));};
 $('#copy-address').onclick=()=>copy($('#participant-address').href);
-$('#freeze').onclick=()=>{frozen=!frozen;frozenPeople=frozen?structuredClone(participants):null;frozenActivity=frozen?[...records.values()]:null;frozenRows=frozen?renderedRows:null;for(const q of ['#task-filter','#noise-filter'])$(q).disabled=frozen;text('#freeze',frozen?'Resume display (collecting)':'Freeze view');if(!frozen)schedule();};
+$('#freeze').onclick=()=>{frozen=!frozen;frozenPeople=frozen?structuredClone(participants):null;frozenActivity=frozen?[...records.values()]:null;frozenRows=frozen?renderedRows:null;for(const q of chartControls)$(q).disabled=frozen;text('#freeze',frozen?'Resume display (collecting)':'Freeze view');if(!frozen)schedule();};
 $('#present').onclick=async()=>{const on=document.body.classList.toggle('presenting');text('#present',on?'Exit presentation':'Present ⛶');try{if(on&&!document.fullscreenElement)await document.documentElement.requestFullscreen();else if(!on&&document.fullscreenElement)await document.exitFullscreen();}catch{/* The presentation layout works without browser fullscreen. */}setTimeout(()=>schedule(),100);};
-for(const q of ['#task-filter','#noise-filter'])$(q).onchange=()=>{selected=null;focusStudent();schedule();};
+for(const q of chartControls)$(q).onchange=()=>{selected=null;extent=1600;focusStudent();schedule();};
 async function axisTo(next){
   if(axis===next)return;axis=next;
   $$('[data-axis]').forEach(b=>{b.classList.toggle('active',b.dataset.axis===axis);b.setAttribute('aria-pressed',String(b.dataset.axis===axis));});
