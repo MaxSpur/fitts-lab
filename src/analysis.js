@@ -1,6 +1,48 @@
 import {datasetKey,datasetLabel} from './runs.js';
 import {firstAttempts,mean,regression,hash} from './math.js';
 import {INTERFACE_ORDER,TASK_LABELS} from './protocol.js';
+
+const T95=[0,12.706,4.303,3.182,2.776,2.571,2.447,2.365,2.306,2.262,2.228,2.201,2.179,2.160,2.145,2.131,2.120,2.110,2.101,2.093,2.086,2.080,2.074,2.069,2.064,2.060,2.056,2.052,2.048,2.045,2.042];
+export function meanInterval(values){
+  const a=values.filter(Number.isFinite),n=a.length,m=mean(a);if(!n)return{mean:null,low:null,high:null,n:0};
+  if(n<2)return{mean:m,low:null,high:null,n};
+  const variance=a.reduce((s,v)=>s+(v-m)**2,0)/(n-1),se=Math.sqrt(variance/n),t=n-1<T95.length?T95[n-1]:1.96;
+  return{mean:m,low:m-t*se,high:m+t*se,n};
+}
+function runConditionMeans(rows){
+  const groups=new Map();
+  for(const r of rows){
+    const key=[datasetKey(r),r.task,r.app_version,r.condition,r.device,r.perturbation,r.jitter_css_px,r.gain,r.input_mode].join('|');
+    if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);
+  }
+  return [...groups.values()].map(a=>({...a[0],dataset_id:datasetKey(a[0]),acquisition_ms:mean(a.map(r=>r.acquisition_ms)),
+    distance:mean(a.map(r=>r.distance).filter(Number.isFinite)),approach_width:mean(a.map(r=>r.approach_width).filter(Number.isFinite)),index_difficulty:mean(a.map(r=>r.index_difficulty).filter(Number.isFinite)),n_trials:a.length}));
+}
+/** Classroom uncertainty is across student-run condition means, so repeated clicks do not masquerade as independent people. */
+export function conditionIntervals(rows,x='index_difficulty'){
+  const runMeans=runConditionMeans(firstAttempts(rows,{perturbation:'all',hitsOnly:true})),groups=new Map();
+  for(const r of runMeans){
+    if(!Number.isFinite(r[x]))continue;
+    const key=[r.task,r.app_version,r.condition,r.device,r.perturbation,r.jitter_css_px,r.gain,r.input_mode].join('|');
+    if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);
+  }
+  return [...groups.values()].map(a=>{const ci=meanInterval(a.map(r=>r.acquisition_ms));return{...a[0],[x]:mean(a.map(r=>r[x])),acquisition_ms:ci.mean,ci_low:ci.low,ci_high:ci.high,n_runs:ci.n};});
+}
+/** Complete matched runs only: summarize free/edge means and paired bounded-minus-free effects with 95% t intervals. */
+export function boundaryStatistics(boundaries){
+  const comparisons=new Map();for(const r of boundaries){if(!comparisons.has(r.comparison_key))comparisons.set(r.comparison_key,[]);comparisons.get(r.comparison_key).push(r);}
+  const complete=[...comparisons.values()].filter(a=>a.length===2&&a.some(r=>r.variant.endsWith('-floating'))&&a.some(r=>r.variant.endsWith('-edge')));
+  const summaryGroups=new Map(),effects=[];
+  for(const pairRows of complete){
+    for(const r of pairRows){const key=r.summary_key+'|'+r.variant;if(!summaryGroups.has(key))summaryGroups.set(key,[]);summaryGroups.get(key).push(r);}
+    const free=pairRows.find(r=>r.variant.endsWith('-floating')),edge=pairRows.find(r=>r.variant.endsWith('-edge'));
+    effects.push({...edge,difference_ms:edge.acquisition_ms-free.acquisition_ms,effect_pair:edge.pair,order:edge.pair==='menu'?0:1});
+  }
+  const summaries=[...summaryGroups.values()].map(a=>{const ci=meanInterval(a.map(r=>r.acquisition_ms));return{...a[0],acquisition_ms:ci.mean,ci_low:ci.low,ci_high:ci.high,n_runs:ci.n};});
+  const effectGroups=new Map();for(const r of effects){if(!effectGroups.has(r.summary_key))effectGroups.set(r.summary_key,[]);effectGroups.get(r.summary_key).push(r);}
+  const effectSummary=[...effectGroups.values()].map(a=>{const ci=meanInterval(a.map(r=>r.difference_ms));return{...a[0],difference_ms:ci.mean,ci_low:ci.low,ci_high:ci.high,n_runs:ci.n};});
+  return{summaries,effects,effectSummary};
+}
 export function boundaryRows(rows,perturbation='normal',maxAcquisitionMs=Infinity){
   const groups=new Map();for(const r of firstAttempts(rows,{task:'interfaces',perturbation})){
     if(!/^(menu|corner)-(floating|edge)$/.test(r.variant))continue;

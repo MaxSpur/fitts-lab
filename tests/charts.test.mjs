@@ -36,3 +36,5 @@ test('boundary chart exposes the shared run focus and selection signals',()=>{co
 
 test('classroom hero overlays selected-run fits without changing the participant scatter',()=>{const classroom=specs.heroSpec(),participant=specs.scatterSpec();assert.equal(classroom.layer.filter(l=>l.data?.name==='selectedFit').length,2);assert.equal(participant.layer.filter(l=>l.data?.name==='selectedFit').length,0);});
 test('boundary chart accepts a focused y-domain',()=>{const spec=specs.boundarySpec({height:185,yMax:1250});assert.equal(spec.height,185);for(const layer of spec.layer)assert.deepEqual(layer.encoding.y.scale.domain,[0,1250]);});
+test('classroom boundary analysis adds an estimation panel and 95% interval layers',()=>{const spec=specs.boundarySpec({analysis:true});assert.equal(spec.vconcat.length,2);assert.ok(spec.vconcat[0].layer.some(l=>l.data?.name==='boundarySummary'&&l.encoding?.y2));assert.ok(spec.vconcat[1].layer.some(l=>l.data?.name==='effectSummary'&&l.encoding?.y2));});
+test('classroom hero includes condition-level uncertainty layers',()=>{const spec=specs.heroSpec();assert.ok(spec.layer.some(l=>l.data?.name==='summary'&&l.encoding?.y2));});

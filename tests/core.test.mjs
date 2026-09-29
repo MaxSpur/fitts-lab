@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {nearFar,shannon,approachWidth,constrainedMove,regression,downsample,seeded} from '../src/math.js';
 import {protocol,targetFor,homeFor,buttonSequence,boundaryLayout,BUTTON_SETS,HORIZONTAL_DISTANCES,TARGET_SIZES,CIRCLE_SITES,circleSite,circleSequence,boundsFor,VERSION} from '../src/protocol.js';
 import {TrialEngine} from '../src/engine.js';
-import {boundaryRows,trendlines} from '../src/analysis.js';
+import {boundaryRows,boundaryStatistics,conditionIntervals,meanInterval,trendlines} from '../src/analysis.js';
 import {simulationRows} from '../src/simulation.js';
 import {validateTrial} from '../shared/validate.js';
 const pid='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -203,3 +203,7 @@ test('size trends require actual size variation and exclude failed attempts',()=
  assert.ok(fit.fits[0].b<0);assert.ok(fit.lines.every(r=>Number.isFinite(r.approach_width)));
  assert.equal(trendlines(rows.filter(r=>r.target_w===20),'approach_width').fits.length,0);
 });
+
+test('mean intervals summarize independent run-level values',()=>{const ci=meanInterval([100,200,300,400]);assert.equal(ci.mean,250);assert.equal(ci.n,4);assert.ok(ci.low<250&&ci.high>250);});
+test('condition intervals aggregate student-run condition means rather than raw clicks',()=>{const base={task:'horizontal',app_version:VERSION,condition:'c',device:'unspecified',perturbation:'normal',jitter_css_px:0,gain:1,input_mode:'native',practice:false,attempt:1,hit:true,index_difficulty:2,distance:200,approach_width:50};const rows=[1,2].flatMap(p=>[100,200].map((ms,i)=>({...base,id:`${p}-${i}`,participant_id:`p${p}`,run_id:`r${p}`,acquisition_ms:ms*p})));const s=conditionIntervals(rows)[0];assert.equal(s.n_runs,2);assert.equal(s.acquisition_ms,225);assert.ok(s.ci_low<s.acquisition_ms&&s.ci_high>s.acquisition_ms);});
+test('boundary statistics use complete pairs and report bounded minus free effects',()=>{const base={summary_key:'s',pair:'menu',participant_id:'p',dataset_label:'P',order:0};const rows=[{...base,dataset_id:'p:r1',comparison_key:'r1',variant:'menu-floating',acquisition_ms:600},{...base,dataset_id:'p:r1',comparison_key:'r1',variant:'menu-edge',acquisition_ms:500},{...base,dataset_id:'p:r2',comparison_key:'r2',variant:'menu-floating',acquisition_ms:700},{...base,dataset_id:'p:r2',comparison_key:'r2',variant:'menu-edge',acquisition_ms:550}];const s=boundaryStatistics(rows);assert.equal(s.effects.length,2);assert.deepEqual(s.effects.map(r=>r.difference_ms),[-100,-150]);assert.equal(s.effectSummary[0].difference_ms,-125);assert.equal(s.summaries.length,2);});
