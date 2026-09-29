@@ -1,16 +1,16 @@
 import {datasetKey,datasetLabel} from './runs.js';
 import {firstAttempts,mean,regression,hash} from './math.js';
 import {INTERFACE_ORDER,TASK_LABELS} from './protocol.js';
-export function boundaryRows(rows,perturbation='normal'){
+export function boundaryRows(rows,perturbation='normal',maxAcquisitionMs=Infinity){
   const groups=new Map();for(const r of firstAttempts(rows,{task:'interfaces',perturbation})){
     if(!/^(menu|corner)-(floating|edge)$/.test(r.variant))continue;
     // The serial sequence includes travel back to ordinary buttons. Compare only approaches to controls.
     if(r.condition!==`${r.variant}-control`)continue;
     const key=[datasetKey(r),r.app_version,r.variant,r.perturbation,r.gain,r.input_mode].join('|');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(r);
   }
-  return [...groups.values()].flatMap(a=>{const hits=a.filter(r=>r.hit);if(!hits.length)return[];const v=a[0].variant;
+  return [...groups.values()].flatMap(a=>{const hits=a.filter(r=>r.hit),timedHits=hits.filter(r=>!Number.isFinite(maxAcquisitionMs)||r.acquisition_ms<=maxAcquisitionMs);if(!timedHits.length)return[];const v=a[0].variant;
     const pair=v.startsWith('menu')?'menu':'corner';
-    return [{...a[0],dataset_label:datasetLabel(a[0]),acquisition_ms:mean(hits.map(r=>r.acquisition_ms)),error_rate:1-hits.length/a.length,n:a.length,
+    return [{...a[0],dataset_label:datasetLabel(a[0]),acquisition_ms:mean(timedHits.map(r=>r.acquisition_ms)),error_rate:1-hits.length/a.length,n:a.length,timed_n:timedHits.length,excluded_time:hits.length-timedHits.length,
       pair,summary_key:[a[0].app_version,pair,a[0].gain,a[0].input_mode,a[0].perturbation].join('|'),comparison_key:[datasetKey(a[0]),a[0].app_version,pair,a[0].gain,a[0].input_mode,a[0].perturbation].join('|'),
       order:INTERFACE_ORDER.indexOf(v)}];});
 }

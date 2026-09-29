@@ -53,6 +53,7 @@ function acquisitionCutoff(){const value=$('#outlier-filter').value;return value
 function withinCutoff(r,cutoff=acquisitionCutoff()){return !Number.isFinite(cutoff)||r.acquisition_ms<=cutoff;}
 function heroRows(allRows=[...records.values()]){const task=$('#task-filter').value,noise=$('#noise-filter').value;return firstAttempts(allRows,{...(task==='all'?{}:{task}),perturbation:noise}).filter(r=>Number.isFinite(r.index_difficulty)&&!/-edge$/.test(r.variant));}
 function filterRows(allRows=[...records.values()]){const cutoff=acquisitionCutoff(),eligible=heroRows(allRows),rows=eligible.filter(r=>withinCutoff(r,cutoff));return{rows,hidden:eligible.length-rows.length,cutoff};}
+function boundaryOutlierCount(rows,perturbation,cutoff){if(!Number.isFinite(cutoff))return 0;return firstAttempts(rows,{task:'interfaces',perturbation,hitsOnly:true}).filter(r=>/^(menu|corner)-(floating|edge)$/.test(r.variant)&&r.condition===`${r.variant}-control`&&r.acquisition_ms>cutoff).length;}
 async function render(){
   if(frozen)return;const generation=sourceGeneration;const allRows=[...records.values()],allFirst=firstAttempts(allRows,{perturbation:'all'}),filtered=filterRows(allRows),rs=filtered.rows;
   text('#participant-count',participants.size);text('#attempt-count',records.size.toLocaleString());text('#error-count',allFirst.length?`${(100*allFirst.filter(r=>!r.hit).length/allFirst.length).toFixed(1)}%`:'—');
@@ -69,8 +70,8 @@ async function render(){
     const cutoffNote=filtered.hidden?` · ${filtered.hidden} ${filtered.hidden===1?'trial':'trials'} over ${filtered.cutoff/1000} s hidden from plots and fits; exports keep all data`:'';
     text('#coverage',`${rs.length} first attempts in this view · ${new Set(rs.map(r=>r.participant_id)).size} students · ${new Set(rs.map(datasetKey)).size} runs · ${new Set(rs.map(r=>r.condition)).size} conditions${cutoffNote}${rs.length>5000?' · faint marks show a deterministic 5,000-observation sample; calculations use all visible rows':''}`);
   }else{charts.hero.empty('The selected task and condition have no observations yet.');text('#fit-caption','Waiting for enough successful trials to fit a line.');text('#coverage','');}
-  const analysisRows=allRows.filter(r=>withinCutoff(r,filtered.cutoff)),boundaries=boundaryRows(analysisRows,$('#noise-filter').value);
-  if(boundaries.length){if(charts.boundary.result)await charts.boundary.update({boundaries});else await charts.boundary.set(boundarySpec(),{boundaries});const cutoffText=Number.isFinite(filtered.cutoff)?` Trials over ${filtered.cutoff/1000} s are hidden from this summary.`:'';text('#boundary-note','Successful first attempts.'+cutoffText+' Free runs precede bounded runs; practice may affect the difference.');}else{charts.boundary.empty('Interface measurements will appear here.');text('#boundary-note','');}
+  const noise=$('#noise-filter').value,boundaries=boundaryRows(allRows,noise,filtered.cutoff),boundaryHidden=boundaryOutlierCount(allRows,noise,filtered.cutoff);
+  if(boundaries.length){if(charts.boundary.result)await charts.boundary.update({boundaries});else await charts.boundary.set(boundarySpec(),{boundaries});const cutoffText=boundaryHidden?` ${boundaryHidden} successful ${boundaryHidden===1?'trial':'trials'} over ${filtered.cutoff/1000} s ${boundaryHidden===1?'is':'are'} omitted from the timing means; error rates still use all first attempts.`:'';text('#boundary-note','Successful first attempts.'+cutoffText+' Free runs precede bounded runs; practice may affect the difference.');}else{charts.boundary.empty('Interface measurements will appear here.');text('#boundary-note',boundaryHidden?`${boundaryHidden} successful boundary ${boundaryHidden===1?'trial':'trials'} ${boundaryHidden===1?'is':'are'} above the ${filtered.cutoff/1000} s cutoff. Choose Show all times to inspect the unfiltered comparison.`:'');}
   if(generation!==sourceGeneration)return;
   await renderSelectedPath();renderedCount=records.size;
 }
@@ -110,11 +111,13 @@ function renderMosaic(){
 }
 $('#clear-selection').onclick=()=>{selected=null;focusStudent();renderSelectedPath();renderMosaic();};
 async function renderSelectedPath(){
-  const activity=activityRuns(frozen&&frozenActivity?frozenActivity:[...records.values()]);let p=activity.find(r=>r.id===selected);if(!p?.latest){const latest=(frozen&&frozenActivity?frozenActivity:[...records.values()]).filter(r=>!r.practice).at(-1);p=latest?activity.find(r=>r.id===datasetKey(latest)):null;}
-  if(!p?.latest){charts.path.empty('Select a student run to inspect its latest movement.');return;}
-  text('#selected-path-title',`${p.label} · latest movement`);const paths=pathRows([p.latest]);
+  const sourceRows=frozen&&frozenActivity?frozenActivity:[...records.values()],activity=activityRuns(sourceRows);let p=activity.find(r=>r.id===selected);if(!p?.latest){const latest=sourceRows.filter(r=>!r.practice).at(-1);p=latest?activity.find(r=>r.id===datasetKey(latest)):null;}
+  if(!p?.latest){charts.path.empty('Select a student run to inspect its recent movements.');return;}
+  const latest=p.latest,runRows=sourceRows.filter(r=>!r.practice&&datasetKey(r)===p.id),sameSet=latest.set_id?runRows.filter(r=>r.set_id===latest.set_id):runRows.filter(r=>r.task===latest.task),recent=sameSet.slice(-12);
+  if(!recent.length){charts.path.empty('No movement paths are available for this run.');return;}
+  const n=recent.length,last=recent.at(-1);text('#selected-path-title',`${p.label} · latest ${n} ${n===1?'movement':'movements'}`);const paths=pathRows(recent,12);
   if(charts.path.result)await charts.path.update({paths});else await charts.path.set(pathSpec(),{paths});
-  text('#selected-path-note',`${TASK_LABELS[p.latest.task]} · ${Math.round(p.latest.acquisition_ms)} ms · ${p.latest.hit?'hit':'miss'} · attempt ${p.latest.attempt}`);
+  text('#selected-path-note',`${TASK_LABELS[last.task]} · latest set · ${n} overlaid ${n===1?'attempt':'attempts'} · latest ${Math.round(last.acquisition_ms)} ms · ${last.hit?'hit':'miss'}${last.attempt>1?' · retry':''} · raw paths are unaffected by the time cutoff`);
 }
 function showConnection(){
   if(source!=='remote')return;
