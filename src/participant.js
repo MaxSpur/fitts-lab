@@ -8,7 +8,7 @@ import {hash,firstAttempts,mean,pathRows,speedRows,endpointRows} from './math.js
 import {boundaryRows,trendlines,trendCaption,plotAxis} from './analysis.js';
 import {Chart} from './charts.js';
 import {pathSpec,speedSpec,endpointsSpec,scatterSpec,boundarySpec} from './specs.js';
-import {put,get,all,clear,saved,save,identity} from './storage.js';
+import {put,get,all,clearParticipantData,saved,save,identity} from './storage.js';
 import {configured,api,localRoom,joinRoom,Outbox} from './network.js';
 common();
 let currentRun=saved('experiment-run',null);if(!currentRun||currentRun.version!==VERSION){currentRun=nextRun(currentRun);save('experiment-run',currentRun);save('progress',{});}
@@ -181,8 +181,20 @@ $('#new-run').onclick=()=>{
   updateRunControls();$('#result-run').value=currentRun.id;resultExtent=1600;switchTask('horizontal');renderResults();
   $('#experiment').scrollIntoView({behavior:'smooth'});toast(`Run ${currentRun.number} is ready. Earlier results are saved.`);
 };
-$('#clear-data').onclick=async()=>{if(!confirm('Clear all participant trials and set history in this browser? Export first. Pending uploads will also be removed. The instructor’s stored copy is unchanged.'))return;
-  arena.pause('Cleared local history');for(const store of ['trials','sets','outbox'])await clear(store);rows=[];sets=[];progress={};save('progress',progress);updateRunControls();prepare();renderResults();outbox.status();};
+$('#clear-data').onclick=async()=>{
+  if(!confirm('Start over from the first Horizontal set? This permanently deletes all experiment results and set history saved in this browser, including earlier runs and pending uploads. Export first if you want to keep them. Results already shared with the instructor, including uploads already in progress, remain in the classroom. Your classroom connection is kept.'))return;
+  const button=$('#clear-data');button.disabled=true;
+  arena.pause('Starting over');clearTimeout(refreshTimer);refreshTimer=null;
+  try{
+    await clearParticipantData();
+    rows=[];sets=[];currentSet=null;progress={};save('progress',progress);
+    currentRun=nextRun(currentRun);save('experiment-run',currentRun);
+    $('#run-mode').value='guided';$('#explore-controls').hidden=true;$('#input-mode').value='auto';$('#jitter').checked=false;$('#gain').value='1';
+    resultExtent=1600;updateRunControls();$('#result-run').value=currentRun.id;
+    switchTask('horizontal');await renderResults();await outbox.status();
+    toast('Local results deleted. The first Horizontal set is ready.');
+  }catch(e){storageError(e);}finally{button.disabled=false;}
+};
 initGeometryLab();
 async function discoverRoom(){
   const useLocal=new URLSearchParams(location.search).has('local');

@@ -35,3 +35,5 @@ Students choose their own stage; the legacy backend `phase` field is ignored. Pl
 `src/geometry-lab.js` owns the unrecorded 2D Method editor. It shares the experiment's center-chord formula, keeps the start outside the rectangle, and demonstrates top/right window edges with a clamped preview dot. Edge toggles leave finite geometric indices unchanged; these describe the free target, not bounded pointing. Verify move, edge/corner resize, independent edge toggles, keyboard, cancellation, and reset after changes. Method content stays expanded and uses American English.
 
 The participant workspace caps arena size by window height while preserving aspect ratio and CSS-pixel measurements. Starting a set scrolls only if the stage is clipped; keep current-set charts immediately below it and preserve scroll position across sets.
+
+Participant Start over clears trials, sets, and outbox in one IndexedDB transaction, preserves membership, and allocates a new run ID to avoid mixing new results with previously uploaded records. Clear `currentSet` before preparing the first guided Horizontal set so paused history is not saved again.

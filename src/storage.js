@@ -20,3 +20,15 @@ const memoryPreferences=new Map();
 export function saved(key,fallback){try{return JSON.parse(localStorage.getItem('fitts:'+key))??memoryPreferences.get(key)??fallback;}catch{return memoryPreferences.get(key)??fallback;}}
 export function save(key,value){memoryPreferences.set(key,value);try{localStorage.setItem('fitts:'+key,JSON.stringify(value));}catch{/* Preferences remain usable for this tab; participant storage reports persistence failures separately. */}}
 export function identity(){let id=saved('identity',null);if(!id){id=crypto.randomUUID();save('identity',id);}return id;}
+
+/** Clear participant history and queued uploads together; preserve classroom membership. */
+export async function clearParticipantData(){
+  const d=await db();
+  return new Promise((resolve,reject)=>{
+    const tx=d.transaction(['trials','sets','outbox'],'readwrite');
+    for(const name of ['trials','sets','outbox'])tx.objectStore(name).clear();
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+    tx.onabort=()=>reject(tx.error||new Error('Local reset aborted.'));
+  });
+}
