@@ -1,0 +1,51 @@
+name: Validate analysis and publication
+on:
+  pull_request:
+  push:
+    branches: [analysis-overview-20260929]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fitts_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: fitts_test
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - name: Validate SQL migrations and public authorization in an isolated database
+        run: |
+          psql -v ON_ERROR_STOP=1 -f tests/sql/results-bootstrap.sql
+          for migration in supabase/migrations/*.sql; do
+            psql -v ON_ERROR_STOP=1 -f "$migration"
+          done
+          psql -v ON_ERROR_STOP=1 -f tests/sql/public-results.sql
+      - name: Package tested source for reproducible review
+        if: always()
+        run: git archive --format=tar HEAD -o tested-source.tar
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tested-source
+          path: tested-source.tar
+          retention-days: 1
